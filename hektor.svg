@@ -9,14 +9,18 @@
       <stop offset="48%" stop-color="#c5eeeb"/>
       <stop offset="100%" stop-color="#43c6bc"/>
     </linearGradient>
-    <filter id="soften" filterUnits="userSpaceOnUse" x="-75" y="-75" width="1350" height="856" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="13"/>
+    <filter id="soften" filterUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="13" result="blurred"/>
+      <feOffset in="blurred" dx="-32" dy="32" result="offset"/>
+      <feFlood flood-color="#3c8b87" flood-opacity="0.4" result="shadow-color"/>
+      <feComposite in="shadow-color" in2="offset" operator="in" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="blurred"/></feMerge>
     </filter>
-    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="-75" y="-75" width="1350" height="856" style="mask-type:luminance">
+    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" style="mask-type:luminance">
       <g id="tail-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <path id="tail-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
-    <mask id="head-mask" maskUnits="userSpaceOnUse" x="-75" y="-75" width="1350" height="856" style="mask-type:luminance">
+    <mask id="head-mask" maskUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" style="mask-type:luminance">
       <path id="head-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <g id="head-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
@@ -29,7 +33,12 @@
   </g>
   </g>
   </g>
-  <script><![CDATA[const createGeometry = function createGeometry() {
+  <script><![CDATA[const renderPadding = function renderPadding(config) {
+  const shadow = config.shadowEnabled ?
+    Math.max(Math.abs(config.shadowOffsetX), Math.abs(config.shadowOffsetY)) : 0;
+  return config.strokeWidth / 2 + 4 * config.blur + shadow + 4;
+};
+const createGeometry = function createGeometry() {
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   function arcPoint(start, heading, turn, length, fraction) {
     const half = turn * fraction / 2;
@@ -57,7 +66,7 @@
 const createPathRenderer = function createPathRenderer(config) {
   const { pointAt } = createGeometry();
   const portals = config.wrapEdges ? createPortals(config.width, config.height) : null;
-  const padding = config.strokeWidth / 2 + 4 * config.blur + 4;
+  const padding = renderPadding(config);
   const origin = { x:0, y:0 }, corner = { x:config.width, y:config.height };
   return function slice(arcs, from, to) {
     if (to <= from) return '';
@@ -439,5 +448,5 @@ const createTrail = function createTrail(config) {
     preference.removeEventListener("change", onPreferenceChange);
   });
   reset();
-})({"width":1200,"height":706,"margin":54,"wrapEdges":true,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"motifEnabled":true,"motifRandomStart":true,"motifMirror":true,"motif":[{"radius":96,"sweep":3.141592653589793},{"radius":142,"sweep":-3.141592653589793}],"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
+})({"width":1200,"height":706,"margin":54,"wrapEdges":true,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","shadowEnabled":true,"shadowColor":"#3c8b87","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"motifEnabled":true,"motifRandomStart":true,"motifMirror":true,"motif":[{"radius":96,"sweep":3.141592653589793},{"radius":142,"sweep":-3.141592653589793}],"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
 </svg>

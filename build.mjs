@@ -1,7 +1,7 @@
 /** Build a self-contained SVG. Geometry is generated in the browser on load. */
 import { writeFile } from "node:fs/promises";
 import { createGeometry } from "./geometry.js";
-import { createPathRenderer } from "./renderer.js";
+import { createPathRenderer, renderPadding } from "./renderer.js";
 import { CONFIG } from "./config.js";
 import { createMotif } from "./motif.js";
 import { createPortals } from "./portals.js";
@@ -13,9 +13,10 @@ const esc = value => String(value).replace(/[&<>"']/g, c => ({
 })[c]);
 
 function assemble(config) {
-  const padding = config.wrapEdges ? config.strokeWidth / 2 + 4 * config.blur + 4 : 0;
+  const padding = config.wrapEdges ? renderPadding(config) : 0;
   const region = `x="${-padding}" y="${-padding}" width="${config.width + 2*padding}" height="${config.height + 2*padding}"`;
-  const script = `const createGeometry = ${createGeometry.toString()};
+  const script = `const renderPadding = ${renderPadding.toString()};
+const createGeometry = ${createGeometry.toString()};
 const createPathRenderer = ${createPathRenderer.toString()};
 const createMotif = ${createMotif.toString()};
 const createPortals = ${createPortals.toString()};
@@ -32,7 +33,11 @@ const createTrail = ${createTrail.toString()};\n(${initialize.toString()})(${JSO
       <stop offset="100%" stop-color="${esc(config.backgroundBottom)}"/>
     </linearGradient>
     <filter id="soften" filterUnits="userSpaceOnUse" ${region} color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="${config.blur}"/>
+      <feGaussianBlur stdDeviation="${config.blur}" result="blurred"/>${config.shadowEnabled ? `
+      <feOffset in="blurred" dx="${config.shadowOffsetX}" dy="${config.shadowOffsetY}" result="offset"/>
+      <feFlood flood-color="${esc(config.shadowColor)}" flood-opacity="${config.shadowOpacity}" result="shadow-color"/>
+      <feComposite in="shadow-color" in2="offset" operator="in" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="blurred"/></feMerge>` : ""}
     </filter>
     <mask id="tail-mask" maskUnits="userSpaceOnUse" ${region} style="mask-type:luminance">
       <g id="tail-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
@@ -57,6 +62,11 @@ const createTrail = ${createTrail.toString()};\n(${initialize.toString()})(${JSO
 }
 
 async function main() {
+  if (CONFIG.shadowEnabled &&
+      (![CONFIG.shadowOpacity, CONFIG.shadowOffsetX, CONFIG.shadowOffsetY].every(Number.isFinite) ||
+       CONFIG.shadowOpacity < 0 || CONFIG.shadowOpacity > 1)) {
+    throw new Error("Shadow opacity must be between 0 and 1, and offsets finite");
+  }
   if (!Number.isFinite(CONFIG.speed) || CONFIG.speed <= 0) throw new Error("Speed must be positive");
   if (![CONFIG.fadeDuration].every(n => Number.isFinite(n) && n >= 0)) {
     throw new Error("Cycle durations must be non-negative");

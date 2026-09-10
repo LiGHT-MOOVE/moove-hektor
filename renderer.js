@@ -1,11 +1,18 @@
 import { createGeometry } from './geometry.js';
 import { createPortals } from './portals.js';
 
+/** Keep filter bounds and portal images large enough for all visible effects. */
+export function renderPadding(config) {
+  const shadow = config.shadowEnabled ?
+    Math.max(Math.abs(config.shadowOffsetX), Math.abs(config.shadowOffsetY)) : 0;
+  return config.strokeWidth / 2 + 4 * config.blur + shadow + 4;
+}
+
 /** Render short arcs and nearby periodic images; SVG clips after masks and blur. */
 export function createPathRenderer(config) {
   const { pointAt } = createGeometry();
   const portals = config.wrapEdges ? createPortals(config.width, config.height) : null;
-  const padding = config.strokeWidth / 2 + 4 * config.blur + 4;
+  const padding = renderPadding(config);
   const origin = { x:0, y:0 }, corner = { x:config.width, y:config.height };
   return function slice(arcs, from, to) {
     if (to <= from) return '';

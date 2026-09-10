@@ -128,6 +128,9 @@ Edit `config.js` and rebuild:
 | `margin` | Boundary inset when wrapping is disabled |
 | `minGap` | Gap between solid strokes |
 | `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
+| `shadowEnabled` | Enable the subtle drop shadow; false removes it |
+| `shadowColor`, `shadowOpacity` | Shadow tint and strength (default muted teal, 0.4) |
+| `shadowOffsetX`, `shadowOffsetY` | Shadow displacement in viewBox units (default -32, 32) |
 | `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
 | `seed` | Null for random retries; an integer for a reproducible seed sequence |
 | `searchBudget`, `attempts` | Bounded opening-route exploration when motif is disabled |
@@ -135,6 +138,13 @@ Edit `config.js` and rebuild:
 A shorter trail threshold releases space sooner; a longer threshold keeps more
 of the drawing visible but can cause earlier collisions. The seed for the current
 attempt appears on the SVG root as `data-seed`.
+
+The shadow reuses the already-blurred trail's alpha, offsets and tints it, then
+composites the trail above it. Only one Gaussian blur is needed; shadow softness
+uses the same `blur` setting as the trail. It follows both tip ramps and whole-line
+fading. Portal rendering includes its additional
+extent to preserve edge continuity. It does not affect collision clearance.
+Set `shadowEnabled: false` and rebuild to restore the appearance without shadow.
 
 ## Source structure
 

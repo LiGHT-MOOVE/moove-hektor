@@ -8,6 +8,11 @@ export const CONFIG = {
   blur: 13,
   opacity: 0.55,
   color: "#168c88",
+  shadowEnabled: true, // Set false to remove the depth effect.
+  shadowColor: "#3c8b87",
+  shadowOpacity: 0.4, // Also follows the trail's overall opacity and fading.
+  shadowOffsetX: -32,
+  shadowOffsetY: 32,
   backgroundTop: "#eff9f9",
   backgroundMiddle: "#c5eeeb",
   backgroundBottom: "#43c6bc",

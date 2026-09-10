@@ -77,7 +77,11 @@ and a new seeded attempt starts. The head does not wait for the tail to clear.
 Retries continue for as long as the document is active. Some routes end before
 they reach the tail threshold, depending on their geometry.
 
-Reduced-motion mode shows one static path with no recurring animation. Background
+SVG paths are constructed after simulation substeps finish, rather than on every
+walker advance. Reduced-motion mode likewise renders only its final geometry.
+
+Reduced-motion mode uses the same walker to produce one static snapshot with no
+recurring animation, including when the motif and portals are disabled. Background
 frame gaps are capped to avoid large jumps on return. Frame callbacks and media
 listeners are cleaned up on document disposal.
 
@@ -87,17 +91,18 @@ listeners are cleaned up on document disposal.
 its direction, curvature, and travelled distance through each crossing. Coordinates
 are normalized after every step, keeping geometry numerically bounded.
 
-Curves are split at their exact viewport intersections into disconnected `M`
-subpaths inside the same SVG path. Corner crossings split both coordinates at
-once. All subpaths share one collision history, with periodic proximity checks
-across opposite edges and corners. Fading pieces remain obstacles until fully
-removed. Edges themselves never cause a retry in portal mode.
+The renderer emits each short arc at the tile offsets where its bounds, expanded
+for stroke and blur, overlap the viewport. SVG clips the result after masking
+and blur, so no boundary-intersection search or explicit edge splitting is needed.
+Disconnected pieces use `M` subpaths inside the same SVG path; they never create
+long connections across the screen. Corner crossings naturally use both offsets.
 
-Small translated fragments near each edge carry the stroke and blur across the
-seam. These are render-only pieces, not copies of the full route or extra collision
-objects. The same fragments are applied to both opacity masks. Masks and filters
-have padded bounds; the final composition is clipped to the viewport after blur.
-The background gradient remains fixed.
+These local translated arcs are render-only pieces, not copies of the full route
+or extra collision objects. Both opacity masks use the same renderer. All visible
+geometry shares one collision history, with periodic proximity checks across
+opposite edges and corners. Fading pieces remain obstacles until fully removed.
+Edges themselves never cause a retry in portal mode. The background gradient
+remains fixed.
 
 Set `wrapEdges: false` to restore solid boundaries and the configured `margin`.
 Reduced-motion mode also uses wrapped geometry when portals are enabled.
@@ -136,9 +141,10 @@ attempt appears on the SVG root as `data-seed`.
 
 - `build.mjs`: embeds all runtime functions and configuration into `hektor.svg`.
 - `motif.js`: repeating turn sequence and interrupted-section progress.
-- `trail.js`: bounded-memory distance-based walker, geometry slicing, planning.
+- `trail.js`: bounded-memory simulation, collision history, and movement planning.
+- `geometry.js`: shared arc evaluation and segment-distance mathematics.
+- `renderer.js`: distance slicing and SVG path construction with local tile offsets.
 - `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.
-- `portals.js`: exact curve splitting, local blur fragments, and periodic collision checks.
-- `walker.js`: static full-route generator for reduced motion with solid boundaries.
+- `portals.js`: coordinate wrapping, relevant tile offsets, and periodic collision checks.
 - `config.js`: appearance, geometry, length and timing settings.
 - `*.test.js`: geometry, bounded history, tail threshold, retry, and lifecycle checks.

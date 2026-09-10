@@ -37,7 +37,6 @@ test('clear-space motif keeps exact radii and tangent continuity through section
     assert.ok(Math.abs(arc.length / Math.abs(arc.turn) - fixed.motif[arc.motifIndex].radius) < 1e-8);
     if (i) assert.ok(Math.abs(arc.heading - state.arcs[i-1].heading - state.arcs[i-1].turn) < 1e-9);
   }
-  assert.ok(!/NaN|Infinity/.test(state.d));
 });
 
 test('obstacles interrupt the motif and it resumes with continuous heading', () => {
@@ -51,7 +50,6 @@ test('obstacles interrupt the motif and it resumes with continuous heading', () 
       if (previous) assert.ok(Math.abs(arc.heading - previous.heading - previous.turn) < 1e-9);
       previous = arc;
     }
-    assert.ok(!/NaN|Infinity/.test(state.d));
     if (state.blocked) break;
   }
   assert.ok(avoided && resumed);

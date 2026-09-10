@@ -13,10 +13,9 @@ function harness(reduced=false, overrides={}) {
     config:{...CONFIG,motifEnabled:false,wrapEdges:false,seed:42,trailLength:20,tailFadeLength:10,speed:100,fadeDuration:100,...overrides},
     document:{getElementById:id=>elements[id],createElementNS:node,documentElement:{dataset:{}}},
     matchMedia:()=>preference,
-    generateWalk:()=>({d:'static'}),
+    createPathRenderer:()=> (_arcs,a,b)=>b>a?`${a}:${b}`:'',
     createTrail:({seed})=>{seeds.push(seed);return {
-      advance:distance=>({head:Math.min(distance,50),tail:Math.max(0,Math.min(distance,50)-30),blocked:distance>=50,d:'visible'}),
-      slice:(a,b)=>b>a?`${a}:${b}`:'',
+      advance:distance=>({head:Math.min(distance,50),tail:Math.max(0,Math.min(distance,50)-30),blocked:distance>=50,arcs:[]}),
     };},
     requestAnimationFrame:fn=>{frames.set(++id,fn);return id;},
     cancelAnimationFrame:id=>frames.delete(id),
@@ -56,7 +55,7 @@ test('tail is ramped from the start, follows its visible end, then collision ret
 test('reduced motion stays static and cleanup cancels the frame loop',()=>{
   const h=harness(true);
   assert.equal(h.frames.size,0);
-  assert.equal(h.elements.trail.attrs.d,'static');
+  assert.equal(h.elements.trail.attrs.d,'0:18');
   h.reduced(false);assert.equal(h.frames.size,1);
   h.tick(0);h.reduced(true);assert.equal(h.frames.size,0);
   h.reduced(false);h.dispose();assert.equal(h.frames.size,0);
@@ -85,6 +84,6 @@ test('head opacity decreases toward the tip and can be tuned or disabled',()=>{
 test('reduced-motion portal mode uses wrapped geometry without scheduling frames',()=>{
   const h=harness(true,{wrapEdges:true});
   assert.equal(h.frames.size,0);
-  assert.equal(h.elements.trail.attrs.d,'visible');
+  assert.equal(h.elements.trail.attrs.d,'0:18');
   assert.deepEqual(h.seeds,[42]);
 });

@@ -1,7 +1,8 @@
 /** Build a self-contained SVG. Geometry is generated in the browser on load. */
 import { writeFile } from "node:fs/promises";
+import { createGeometry } from "./geometry.js";
+import { createPathRenderer } from "./renderer.js";
 import { CONFIG } from "./config.js";
-import { generateWalk } from "./walker.js";
 import { createMotif } from "./motif.js";
 import { createPortals } from "./portals.js";
 import { createTrail } from "./trail.js";
@@ -14,10 +15,11 @@ const esc = value => String(value).replace(/[&<>"']/g, c => ({
 function assemble(config) {
   const padding = config.wrapEdges ? config.strokeWidth / 2 + 4 * config.blur + 4 : 0;
   const region = `x="${-padding}" y="${-padding}" width="${config.width + 2*padding}" height="${config.height + 2*padding}"`;
-  const script = `const createMotif = ${createMotif.toString()};
+  const script = `const createGeometry = ${createGeometry.toString()};
+const createPathRenderer = ${createPathRenderer.toString()};
+const createMotif = ${createMotif.toString()};
 const createPortals = ${createPortals.toString()};
-const createTrail = ${createTrail.toString()};
-const generateWalk = ${generateWalk.toString()};\n(${initialize.toString()})(${JSON.stringify(config)});`;
+const createTrail = ${createTrail.toString()};\n(${initialize.toString()})(${JSON.stringify(config)});`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${config.width} ${config.height}" role="img" aria-labelledby="title desc">
   <title id="title">Moove — a wandering line</title>
@@ -64,7 +66,6 @@ async function main() {
     throw new Error("Head fade length must be non-negative and power must be positive");
   }
   createTrail({ ...CONFIG, seed: 1 });
-  generateWalk({ ...CONFIG, seed: 1 }); // Validate configuration before writing.
   const svg = assemble(CONFIG);
   await writeFile(new URL("./hektor.svg", import.meta.url), svg, "utf8");
   console.log(`Built hektor.svg (${(Buffer.byteLength(svg) / 1024).toFixed(1)} KB). Open in a browser to animate.`);

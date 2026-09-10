@@ -1,3 +1,4 @@
+import { createGeometry } from "./geometry.js";
 import { createMotif } from "./motif.js";
 import { createPortals } from "./portals.js";
 
@@ -12,8 +13,8 @@ export function createTrail(config) {
       !config.radii.every(r => Number.isFinite(r) && r > 0)) {
     throw new Error("Invalid walker configuration");
   }
-  const padding = strokeWidth / 2 + 4 * config.blur + 4;
-  const portals = config.wrapEdges ? createPortals(width, height, padding) : null;
+  const { arcPoint, segmentDistance } = createGeometry();
+  const portals = config.wrapEdges ? createPortals(width, height) : null;
   let state = config.seed >>> 0;
   function random() {
     state += 0x6D2B79F5;
@@ -37,25 +38,10 @@ export function createTrail(config) {
   }
   const subdivisions = 4;
   const error = step * maxTurn / (8 * subdivisions ** 2);
-  const distanceToSegment = (p, a, b) => {
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
-    return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
-  };
-  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  function distance(a, b, c, d) {
-    if (cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0) return 0;
-    return Math.min(distanceToSegment(a, c, d), distanceToSegment(b, c, d),
-      distanceToSegment(c, a, b), distanceToSegment(d, a, b));
-  }
   function propose(p, heading, turn, arcLength = step) {
     const points = [p];
     for (let i = 1; i <= subdivisions; i++) {
-      const f = i / subdivisions;
-      // Stable circular-arc evaluation, including nearly straight steps.
-      const half = turn * f / 2;
-      const length = arcLength * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
-      points.push({ x: p.x + length * Math.cos(heading + half), y: p.y + length * Math.sin(heading + half) });
+      points.push(arcPoint(p, heading, turn, arcLength, i / subdivisions));
     }
     return { points, turn, length: arcLength, end: points.at(-1) };
   }
@@ -77,7 +63,7 @@ export function createTrail(config) {
             Math.min(a.x, b.x) - gap > Math.max(segment.a.x, segment.b.x) ||
             Math.max(a.y, b.y) + gap < Math.min(segment.a.y, segment.b.y) ||
             Math.min(a.y, b.y) - gap > Math.max(segment.a.y, segment.b.y)) continue;
-        if (distance(a, b, segment.a, segment.b) < gap) return false;
+        if (segmentDistance(a, b, segment.a, segment.b) < gap) return false;
       }
     }
     return true;
@@ -148,8 +134,7 @@ export function createTrail(config) {
     if (motif) {
       const instruction=motif.peek();
       const curve=propose(p,heading,instruction.turn,instruction.length);
-      const sectionStart = instruction.remainingLength ===
-        Math.abs(config.motif[instruction.index].sweep) * instruction.radius;
+      const sectionStart = instruction.sectionStart;
       if (valid(curve,mesh,index) && (!(instruction.interrupted || sectionStart) || motifHasRoom(instruction))) {
         commit({...curve,source:'motif',motifIndex:instruction.index});
         motif.consume(instruction.length);
@@ -198,37 +183,6 @@ export function createTrail(config) {
 
   }
 
-  function pointAt(arc, distance) {
-    const arcLength=arc.to-arc.from;
-    const f = clamp((distance - arc.from) / arcLength, 0, 1);
-    const half = arc.turn * f / 2;
-    const length = arcLength * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
-    return { x: arc.start.x + length * Math.cos(arc.heading + half),
-      y: arc.start.y + length * Math.sin(arc.heading + half) };
-  }
-  function slice(from, to) {
-    let d = "", ghosts = "", last;
-    function command(arc, piece, fresh) {
-      let result = fresh ? ` M ${piece.start.x} ${piece.start.y}` : "";
-      if (Math.abs(arc.turn) < 1e-10) return result + ` L ${piece.end.x} ${piece.end.y}`;
-      const radius = (arc.to-arc.from) / Math.abs(arc.turn);
-      return result + ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${piece.end.x} ${piece.end.y}`;
-    }
-    for (const arc of arcs) {
-      const a = Math.max(from, arc.from), b = Math.min(to, arc.to);
-      if (b <= a) continue;
-      const pieces = portals ? portals.split(arc, a, b, pointAt) :
-        [{ from:a, to:b, start:pointAt(arc,a), end:pointAt(arc,b) }];
-      for (const piece of pieces) {
-        const fresh = !last || Math.hypot(last.x-piece.start.x,last.y-piece.start.y)>1e-6;
-        d += command(arc,piece,fresh); last=piece.end;
-        if (portals) for (const fragment of portals.fragments(arc,piece,pointAt)) {
-          ghosts += command(arc,fragment,true);
-        }
-      }
-    }
-    return (d + ghosts).trim();
-  }
   return {
     advance(distance) {
       if (!Number.isFinite(distance) || distance < head) throw new Error("Head distance must increase");
@@ -242,8 +196,7 @@ export function createTrail(config) {
       const first = arcs.length ? arcs[0].id : index;
       mesh = mesh.filter(segment => segment.arc >= first);
       return { head, tail, blocked: blocked && head >= endDistance,
-        arcs, mesh, d: slice(tail, head), length: head - tail };
+        arcs, mesh, length: head - tail };
     },
-    slice,
   };
 }

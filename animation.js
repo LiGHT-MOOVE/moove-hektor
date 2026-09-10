@@ -8,16 +8,19 @@ export function initialize(config) {
   const headBody = document.getElementById("head-body");
   const preference = matchMedia("(prefers-reduced-motion: reduce)");
   const rampCount = 32;
-  ramp.replaceChildren();
-  const bands = Array.from({ length: rampCount }, () => {
-    const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    ramp.appendChild(node); return node;
-  });
-  headRamp.replaceChildren();
-  const headBands = Array.from({ length: rampCount }, () => {
-    const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    headRamp.appendChild(node); return node;
-  });
+  const slice = createPathRenderer(config);
+  function createBands(group, brightness) {
+    group.replaceChildren();
+    return Array.from({ length: rampCount }, (_, i) => {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const luminance = Math.round(255 * brightness((i + 0.5) / rampCount));
+      node.setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+      group.appendChild(node);
+      return node;
+    });
+  }
+  const bands = createBands(ramp, t => t);
+  const headBands = createBands(headRamp, t => Math.pow(1 - t, config.headFadePower));
   let walker, head = 0, cycle = 0, frame, previousTime, fading = false, fadeTime = 0, disposed = false;
 
   function reset() {
@@ -30,49 +33,40 @@ export function initialize(config) {
     path.setAttribute("d", ""); body.setAttribute("d", "");
     [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
     headBody.setAttribute("d", "");
+    walker = createTrail({ ...config, seed });
     if (preference.matches) {
-      let d;
-      if (config.wrapEdges || config.motifEnabled) {
-        const still = createTrail({ ...config, seed });
-        let state;
-        for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {
-          state = still.advance(distance);
-          if (state.blocked) break;
-        }
-        d = state?.d ?? "";
-      } else d = generateWalk({ ...config, seed }).d;
+      let state;
+      for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {
+        state = walker.advance(distance);
+        if (state.blocked) break;
+      }
+      const d = state ? slice(state.arcs, state.tail, state.head) : "";
       path.setAttribute("d", d); body.setAttribute("d", d);
       headBody.setAttribute("d", d);
       return;
     }
-    walker = createTrail({ ...config, seed });
     frame = requestAnimationFrame(tick);
   }
 
   function render(state) {
-    path.setAttribute("d", state.d);
+    path.setAttribute("d", slice(state.arcs, state.tail, state.head));
     // A second mask multiplies the tail mask, including when both ramps overlap.
     const headSpan = Math.min(config.headFadeLength, head - state.tail);
     const headStart = head - headSpan;
-    headBody.setAttribute("d", walker.slice(state.tail, headStart));
+    headBody.setAttribute("d", slice(state.arcs, state.tail, headStart));
     for (let i = 0; i < rampCount; i++) {
       const from = headStart + headSpan * i / rampCount;
       const to = headStart + headSpan * (i + 1) / rampCount;
-      const opacity = Math.pow(1 - (i + 0.5) / rampCount, config.headFadePower);
-      const luminance = Math.round(255 * opacity);
-      headBands[i].setAttribute("d", walker.slice(from, to));
-      headBands[i].setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+      headBands[i].setAttribute("d", slice(state.arcs, from, to));
     }
     // Always taper the visible tail, including while its starting point is fixed.
     const tailSpan = Math.min(config.tailFadeLength, head - state.tail);
     const fadeEnd = state.tail + tailSpan;
-    body.setAttribute("d", walker.slice(fadeEnd, head));
+    body.setAttribute("d", slice(state.arcs, fadeEnd, head));
     for (let i = 0; i < rampCount; i++) {
       const from = state.tail + (fadeEnd - state.tail) * i / rampCount;
       const to = state.tail + (fadeEnd - state.tail) * (i + 1) / rampCount;
-      const luminance = Math.round(255 * (i + 0.5) / rampCount);
-      bands[i].setAttribute("d", walker.slice(from, to));
-      bands[i].setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+      bands[i].setAttribute("d", slice(state.arcs, from, to));
     }
   }
 

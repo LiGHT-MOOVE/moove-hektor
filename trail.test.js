@@ -12,7 +12,6 @@ test('distance controls the tail, memory is bounded, and stopped routes do not w
     assert.ok(state.length <= CONFIG.trailLength + CONFIG.tailFadeLength + 1e-7);
     assert.ok(state.arcs.length <= Math.ceil((CONFIG.trailLength + CONFIG.tailFadeLength) / CONFIG.stepLength) + 2);
     assert.ok(state.arcs.every(arc => arc.to > state.tail));
-    assert.ok(!/NaN|Infinity/.test(state.d));
     faded ||= state.tail > 0;
     if (state.blocked) break;
     assert.equal(state.head, head);
@@ -30,7 +29,7 @@ test('geometry is seeded, independent of drawing speed, and includes short strai
   let straight = false;
   for (let head = 18; head < 4000; head += 18) {
     const x = a.advance(head), y = b.advance(head);
-    assert.equal(x.d, y.d);
+    assert.deepEqual(x, y);
     straight ||= x.arcs.some(arc => Math.abs(arc.turn) < 1e-10);
     for (let i = 1; i < x.arcs.length; i++) {
       const previous = x.arcs[i-1], arc = x.arcs[i];
@@ -62,4 +61,8 @@ test('visible and planned geometry stays in bounds and never crosses itself', ()
       if (state.blocked) break;
     }
   }
+});
+
+test('rejects radii too small to preserve stroke clearance', () => {
+  assert.throws(() => createTrail({ ...CONFIG, radii: [10, 20] }), /Radii too small/);
 });

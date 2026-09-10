@@ -14,7 +14,8 @@ export function createMotif(config, random) {
       const length = Math.min(maxLength, remaining * item.radius);
       return { index, radius: item.radius, length,
         turn: Math.sign(item.sweep) * mirror * length / item.radius,
-        remainingLength: remaining * item.radius, interrupted };
+        remainingLength: remaining * item.radius,
+        sectionStart: remaining === Math.abs(item.sweep), interrupted };
     },
     consume(length) {
       remaining -= length / config.motif[index].radius;

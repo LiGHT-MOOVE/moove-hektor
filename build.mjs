@@ -14,8 +14,18 @@ function assemble(config) {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${config.width} ${config.height}" role="img" aria-labelledby="title desc">
   <title id="title">Moove — a wandering line</title>
   <desc id="desc">A randomly generated smooth line draws itself without crossing its earlier route.</desc>
-  <rect width="100%" height="100%" fill="${esc(config.background)}"/>
-  <path id="trail" fill="none" stroke="${esc(config.color)}" stroke-width="${config.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${esc(config.backgroundTop)}"/>
+      <stop offset="48%" stop-color="${esc(config.backgroundMiddle)}"/>
+      <stop offset="100%" stop-color="${esc(config.backgroundBottom)}"/>
+    </linearGradient>
+    <filter id="soften" filterUnits="userSpaceOnUse" x="0" y="0" width="${config.width}" height="${config.height}" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="${config.blur}"/>
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#background)"/>
+  <path id="trail" fill="none" stroke="${esc(config.color)}" stroke-width="${config.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${config.opacity}" filter="url(#soften)"/>
   <script><![CDATA[${script.replaceAll("]]>", "]]]]><![CDATA[>")}]]></script>
 </svg>
 `;

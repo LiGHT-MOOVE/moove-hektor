@@ -33,7 +33,7 @@ regardless of the directory from which it is invoked.
 ```html
 <object type="image/svg+xml" data="/hektor.svg"
         aria-label="Animated wandering line"
-        style="display:block;width:100%;aspect-ratio:1200/650;border:0">
+        style="display:block;width:100%;aspect-ratio:1200/706;border:0">
 </object>
 ```
 
@@ -49,8 +49,10 @@ chooses a fresh seed with `crypto.getRandomValues`, generates several bounded
 attempts, and uses the longest route. It then animates the stroke at constant
 distance per second. Reduced-motion preference shows the completed route.
 
-The walker takes short circular-arc steps with matching tangents. Randomness
-changes the turning amount gradually, avoiding corners. Circular arcs are used
+The walker takes short circular-arc steps with matching tangents, using exactly
+two radii: 96 and 142 viewBox units. Their ratio follows the approximately 64 and
+94.5 unit curves in the MOOVE logo. It can turn either way at either radius.
+Randomness changes the duration and order of these sweeps, avoiding corners. Circular arcs are used
 directly in the SVG so later smoothing cannot introduce crossings. Curvature
 can change between arcs; this is tangent continuity, not exact curvature continuity.
 
@@ -59,8 +61,9 @@ approximation margin. Non-neighboring sections keep `minGap` plus stroke width
 between centerlines. An adjoining neighborhood is exempt from spacing checks;
 its total turn is capped to prevent local folding. Boundaries include a margin.
 
-This scaffold uses a simple linear scan of previous segments. It stops an attempt
-when trapped and tries another start, rather than backtracking. A shorter route
+This scaffold uses bounding-box rejection and a linear scan of nearby segments.
+When trapped, it backtracks through alternate turns, with a bounded search budget
+per attempt. It keeps the longest result across several starts. A shorter route
 is valid: finite space and positive spacing cannot accommodate unlimited growth.
 For much longer paths, a spatial index and worker-based generation are natural
 extensions. Generation happens synchronously before animation; tune the work
@@ -71,10 +74,18 @@ limits for your target devices.
 - Set `seed` to `null` for new routes, or an integer for repeatable output. The
   active seed is recorded on the SVG root as `data-seed`.
 - Increase `minGap` for more open compositions.
-- Adjust `maxTurn` and `turnChange` for bends and steering variation. The walker
-  caps the effective maximum turn relative to spacing to preserve local safety.
-- Adjust `maxSteps`, `attempts`, and `candidatesPerStep` for length versus startup work.
-- Adjust `speed`, `color`, `strokeWidth`, and `background` for presentation.
+- Adjust the two `radii` for the inner/outer bend sizes. Invalid combinations of
+  small radii and large spacing are rejected rather than silently changing radii.
+- Adjust `maxSteps`, `attempts`, and `searchBudget` for length versus startup work.
+  The target is 9,000 units; available space can produce a shorter valid result.
+- Adjust `speed`, `color`, `strokeWidth`, `opacity`, and `blur` for the soft stroke.
+- Adjust `backgroundTop`, `backgroundMiddle`, and `backgroundBottom` for the
+  vertical light-to-teal gradient. Everything is vector-based and embedded;
+  the reference background image is not loaded at runtime.
+
+The visible stroke is now 38 units wide with a 13-unit Gaussian blur. Collision
+spacing accounts for the solid stroke width; translucent blur halos may overlap.
+Fixed radii refer to the centerline, not the edges of the expanded stroke.
 
 Self-avoidance produces open curls and sweeps, rather than crossing loops.
 This is a scaffold for tuning the visual style, not a reproduction of the reference.

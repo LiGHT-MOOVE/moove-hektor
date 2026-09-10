@@ -27,3 +27,28 @@ test("sampled routes remain in bounds and do not cross across several seeds", ()
     }
   }
 });
+
+
+test("uses exactly the configured radii and preserves tangent direction", () => {
+  const walk = generateWalk({ ...CONFIG, seed: 3 });
+  const used = new Set();
+  for (let i = 0; i < walk.arcs.length; i++) {
+    const arc = walk.arcs[i];
+    const radius = CONFIG.stepLength / Math.abs(arc.turn);
+    assert.ok(CONFIG.radii.some(r => Math.abs(r - radius) < 1e-9));
+    used.add(Math.round(radius));
+    if (i === 0) continue;
+    const prev = walk.arcs[i - 1];
+    const start = prev.points[0];
+    const prevHeading = Math.atan2(prev.end.y - start.y, prev.end.x - start.x) + prev.turn / 2;
+    const nextHeading = Math.atan2(arc.end.y - arc.points[0].y, arc.end.x - arc.points[0].x) - arc.turn / 2;
+    assert.ok(Math.abs(Math.sin(nextHeading - prevHeading)) < 1e-10);
+    assert.ok(Math.cos(nextHeading - prevHeading) > 0);
+  }
+  assert.equal(used.size, 2);
+  assert.ok(walk.length >= 3000, "regression seed should sustain a long route");
+});
+
+test("rejects radii that cannot safely accommodate the stroke and gap", () => {
+  assert.throws(() => generateWalk({ ...CONFIG, radii: [10, 20] }), /Radii too small/);
+});

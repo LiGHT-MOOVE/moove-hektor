@@ -8,9 +8,9 @@ export function generateWalk(config) {
   if (![width, height, margin, step, minGap, strokeWidth].every(Number.isFinite) ||
       step <= 0 || minGap < 0 || strokeWidth <= 0 || margin < strokeWidth / 2 ||
       width <= margin * 2 || height <= margin * 2 ||
-      ![config.maxSteps, config.candidatesPerStep, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
-      !Number.isFinite(config.maxTurn) || config.maxTurn <= 0 ||
-      !Number.isFinite(config.turnChange) || config.turnChange <= 0) {
+      ![config.maxSteps, config.searchBudget, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
+      !Array.isArray(config.radii) || config.radii.length !== 2 ||
+      !config.radii.every(r => Number.isFinite(r) && r > 0)) {
     throw new Error("Invalid walker configuration");
   }
   let state = config.seed >>> 0;
@@ -23,8 +23,11 @@ export function generateWalk(config) {
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const clearance = minGap + strokeWidth;
   const neighbors = Math.ceil(clearance / step) + 2;
-  // A short adjoining neighborhood cannot turn back on itself.
-  const maxTurn = Math.min(config.maxTurn, 0.22, 0.8 / (neighbors + 1));
+  const maxTurn = step / Math.min(...config.radii);
+  // Bound the exempt local neighborhood to less than a quarter turn.
+  if (maxTurn * (neighbors + 1) >= Math.PI / 2) {
+    throw new Error("Radii too small for the stroke width, gap, and step length");
+  }
   const subdivisions = 4;
   const error = step * maxTurn / (8 * subdivisions ** 2);
   const distanceToSegment = (p, a, b) => {
@@ -58,41 +61,57 @@ export function generateWalk(config) {
       const a = candidate.points[i - 1], b = candidate.points[i];
       for (const segment of mesh) {
         if (arcIndex - segment.arc < neighbors) continue;
-        if (distance(a, b, segment.a, segment.b) < clearance + 2 * error) return false;
+        const gap = clearance + 2 * error;
+        if (Math.max(a.x, b.x) + gap < Math.min(segment.a.x, segment.b.x) ||
+            Math.min(a.x, b.x) - gap > Math.max(segment.a.x, segment.b.x) ||
+            Math.max(a.y, b.y) + gap < Math.min(segment.a.y, segment.b.y) ||
+            Math.min(a.y, b.y) - gap > Math.max(segment.a.y, segment.b.y)) continue;
+        if (distance(a, b, segment.a, segment.b) < gap) return false;
       }
     }
     return true;
   }
+  const turns = config.radii.flatMap(radius => [step / radius, -step / radius]);
+  function choices(previous) {
+    // Favor sustained circular sweeps while allowing a different lobe or neck.
+    return turns.map(turn => ({ turn, rank: random() + (turn === previous ? 1.0 : 0) }))
+      .sort((a, b) => b.rank - a.rank).map(item => item.turn);
+  }
   let best = { arcs: [], mesh: [], d: "", length: 0 };
   for (let attempt = 0; attempt < config.attempts; attempt++) {
-    let p = { x: width * (0.35 + random() * 0.3), y: height * (0.35 + random() * 0.3) };
-    p = { x: clamp(p.x, margin + error, width - margin - error), y: clamp(p.y, margin + error, height - margin - error) };
-    let heading = random() * Math.PI * 2;
-    let turn = (random() * 2 - 1) * maxTurn;
+    const start = { x: margin + (width - 2 * margin) * (0.15 + random() * 0.7),
+      y: margin + (height - 2 * margin) * (0.15 + random() * 0.7) };
+    const heading = random() * Math.PI * 2;
     const arcs = [], mesh = [];
-    let d = `M ${p.x} ${p.y}`;
-    for (let index = 0; index < config.maxSteps; index++) {
-      let accepted;
-      for (let trial = 0; trial < config.candidatesPerStep; trial++) {
-        const candidateTurn = clamp(turn + (random() * 2 - 1) * config.turnChange, -maxTurn, maxTurn);
-        const candidate = propose(p, heading, candidateTurn);
-        if (valid(candidate, mesh, index)) { accepted = candidate; break; }
+    const stack = [{ p: start, heading, options: choices(null) }];
+    for (let work = 0; work < config.searchBudget && stack.length; work++) {
+      const current = stack.at(-1);
+      if (!current.options.length) {
+        stack.pop();
+        if (arcs.length) { arcs.pop(); mesh.splice(-subdivisions); }
+        continue;
       }
-      if (!accepted) break;
-      const end = accepted.end;
-      turn = accepted.turn;
-      if (Math.abs(turn) < 1e-8) d += ` L ${end.x} ${end.y}`;
-      else {
-        const radius = step / Math.abs(turn);
-        d += ` A ${radius} ${radius} 0 0 ${turn > 0 ? 1 : 0} ${end.x} ${end.y}`;
+      const turn = current.options.shift();
+      const candidate = propose(current.p, current.heading, turn);
+      if (!valid(candidate, mesh, arcs.length)) continue;
+      for (let j = 1; j < candidate.points.length; j++) {
+        mesh.push({ a: candidate.points[j - 1], b: candidate.points[j], arc: arcs.length });
       }
-      for (let j = 1; j < accepted.points.length; j++) mesh.push({ a: accepted.points[j - 1], b: accepted.points[j], arc: index });
-      arcs.push(accepted);
-      p = end;
-      heading += turn;
+      arcs.push(candidate);
+      if (arcs.length > best.arcs.length) {
+        best = { arcs: arcs.slice(), mesh: mesh.slice(), start, length: arcs.length * step };
+      }
+      if (arcs.length === config.maxSteps) break;
+      // Change steering preference after a randomly sized run, never the radii.
+      const preferred = random() < 0.13 ? turns[Math.floor(random() * turns.length)] : turn;
+      stack.push({ p: candidate.end, heading: current.heading + turn, options: choices(preferred) });
     }
-    if (arcs.length > best.arcs.length) best = { arcs, mesh, d, length: arcs.length * step };
-    if (arcs.length === config.maxSteps) break;
+    if (best.arcs.length === config.maxSteps) break;
+  }
+  best.d = best.start ? `M ${best.start.x} ${best.start.y}` : "";
+  for (const arc of best.arcs) {
+    const radius = step / Math.abs(arc.turn);
+    best.d += ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${arc.end.x} ${arc.end.y}`;
   }
   return best;
 }

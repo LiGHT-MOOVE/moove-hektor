@@ -1,18 +1,21 @@
-// All distances use SVG viewBox units; speed uses units per second.
+// Distances use SVG viewBox units; speed uses units per second.
 export const CONFIG = {
   width: 1200,
-  height: 650,
-  margin: 40,
-  strokeWidth: 3,
-  color: "#c64b45",
-  background: "#faf9f6",
-  speed: 180,
-  seed: null, // null creates a fresh seed on load; use an integer to reproduce a route.
-  stepLength: 12,
-  minGap: 18, // Minimum visible gap between non-neighboring sections.
-  maxTurn: 0.22, // Radians per step; capped by the walker for local safety.
-  turnChange: 0.035,
-  maxSteps: 420,
-  candidatesPerStep: 28,
-  attempts: 5,
+  height: 706,
+  margin: 54,
+  strokeWidth: 38,
+  blur: 13,
+  opacity: 0.55,
+  color: "#168c88",
+  backgroundTop: "#eff9f9",
+  backgroundMiddle: "#c5eeeb",
+  backgroundBottom: "#43c6bc",
+  speed: 110,
+  seed: null, // Fresh on load; set an integer to reproduce a route.
+  stepLength: 18,
+  minGap: 18, // Gap between solid strokes; soft blur halos may overlap.
+  radii: [96, 142], // Logo-inspired ratio: approximately 64 : 94.5.
+  maxSteps: 500,
+  searchBudget: 2400, // Bounded candidate/backtracking operations per attempt.
+  attempts: 6,
 };

@@ -1,36 +1,18 @@
 # Moove Hektor
 
-A dependency-free starting point for a progressively drawn, randomized SVG line.
-Inspired by the structure of the partners-map builder: configuration, geometry,
-SVG assembly, and embedded browser code are kept separate.
+Build a standalone SVG with embedded JavaScript, a teal gradient, and a soft,
+continuously drawn trail. No external packages or runtime assets are required.
 
-## Run
+## Build and preview
 
-Requires Node.js 18 or newer. No packages need installing.
+Requires Node.js 18 or newer.
 
 ```sh
 npm run build
 npm test
 ```
 
-Open `hektor.svg` in a browser. Each line draws until its route is blocked, holds
-for 1.2 seconds, fades out over 1.4 seconds, then starts a new random drawing.
-Reloading also generates another route. After changing
-the source or configuration, rebuild the SVG. The build writes next to `build.mjs`,
-regardless of the directory from which it is invoked.
-
-## Files
-
-| File | Purpose |
-| --- | --- |
-| `config.js` | Dimensions, appearance, seed, walker limits, and drawing speed |
-| `walker.js` | Browser-safe seeded walker and curve collision checks |
-| `animation.js` | Generate on load, then reveal the SVG stroke |
-| `build.mjs` | Embed the functions and configuration into one SVG |
-| `hektor.svg` | Generated, self-contained output |
-| `walker.test.js` | Determinism, bounds, and intersection checks |
-
-## Website embedding
+Open `hektor.svg` in a browser, or embed it with an object:
 
 ```html
 <object type="image/svg+xml" data="/hektor.svg"
@@ -39,61 +21,81 @@ regardless of the directory from which it is invoked.
 </object>
 ```
 
-Use an object or integrate the SVG and initialization into your page. An `<img>`
-or CSS background will not run the embedded JavaScript. Your site's content
-security policy must permit the chosen embedding and script execution method.
-For a strict policy, move the runtime into an allowed external script.
+Rebuild after source changes and reload. An `<img>` or CSS background does not
+execute embedded scripts. Your site's content security policy must permit the
+chosen embedding and script method.
 
-## Generation and animation
+## Behavior
 
-The build packages code, not a fixed route. On each SVG document load, the runtime
-chooses a fresh seed with `crypto.getRandomValues`, generates several bounded
-attempts, and uses the longest route. The selected route is then extended until none of the four allowed next arcs
-fits. It animates at constant distance per second and repeats after a hold and
-fade. Each cycle clears the old line; drawings do not accumulate. Reduced-motion
-preference shows one completed route and disables the cycle.
+The line starts fully visible. Once the head has travelled `trailLength` units,
+its beginning starts to fade. The fade follows distance travelled, never the age
+of individual segments. At the default speed, the initial threshold is reached
+after approximately 21.8 seconds, if the route survives that long.
 
-The walker takes short circular-arc steps with matching tangents, using exactly
-two radii: 96 and 142 viewBox units. Their ratio follows the approximately 64 and
-94.5 unit curves in the MOOVE logo. It can turn either way at either radius.
-Randomness changes the duration and order of these sweeps, avoiding corners. Circular arcs are used
-directly in the SVG so later smoothing cannot introduce crossings. Curvature
-can change between arcs; this is tangent continuity, not exact curvature continuity.
+`trailLength` defaults to 2,393 units, approximately the measured perimeter of
+`ICON_MOOVE_B.svg` in its native viewBox. This is an aesthetic reference length,
+not a promise that the walker traces the logo. `tailFadeLength` adds a 160-unit
+fade zone, making the maximum visible span 2,553 units:
 
-Collision checks subdivide arcs into chords and include a conservative arc
-approximation margin. Non-neighboring sections keep `minGap` plus stroke width
-between centerlines. An adjoining neighborhood is exempt from spacing checks;
-its total turn is capped to prevent local folding. Boundaries include a margin.
+```text
+opaque trail starts at = max(0, headDistance - trailLength)
+visible tail starts at = max(0, headDistance - trailLength - tailFadeLength)
+```
 
-This scaffold uses bounding-box rejection and a linear scan of nearby segments.
-When trapped, it backtracks through alternate turns, with a bounded search budget
-per attempt. It keeps the longest result across several starts. A shorter route
-is valid: finite space and positive spacing cannot accommodate unlimited growth.
-For much longer paths, a spatial index and worker-based generation are natural
-extensions. Generation happens synchronously before animation; tune the work
-limits for your target devices.
+A single colored SVG path is cropped analytically to this interval. A separate
+luminance mask uses a fixed pool of 32 short bands to soften only the tail. Blur
+is applied after masking, preserving the soft edge. Geometry is never split into
+independently timed, fading colored strokes. No mask or path elements accumulate.
 
-## Customize
+The walker mainly uses the two logo-inspired turning radii, 96 and 142 units.
+Occasional short straight passages ease curvature toward zero and back toward a
+preferred radius. Tangents stay continuous; intermediate radii during these
+transitions are intentional. The reverted straight-first behavior is not used.
 
-- Set `seed` to `null` for new routes, or an integer for repeatable output. The
-  active seed is recorded on the SVG root as `data-seed`. A fixed seed reproduces
-  the sequence: each successive cycle increments that seed.
-- Increase `minGap` for more open compositions.
-- Adjust the two `radii` for the inner/outer bend sizes. Invalid combinations of
-  small radii and large spacing are rejected rather than silently changing radii.
-- Adjust `attempts` and `searchBudget` for route exploration versus startup work.
-  There is no configured length cutoff. After exploration, the chosen route grows
-  until blocked by existing strokes or the boundary under the fixed step/radius
-  rules. This is a locally exhausted route, not a globally longest-path guarantee.
-- Adjust `holdDuration` and `fadeDuration` (milliseconds) for the repeat timing.
-- Adjust `speed`, `color`, `strokeWidth`, `opacity`, and `blur` for the soft stroke.
-- Adjust `backgroundTop`, `backgroundMiddle`, and `backgroundBottom` for the
-  vertical light-to-teal gradient. Everything is vector-based and embedded;
-  the reference background image is not loaded at runtime.
+An unseen opening route is explored within a bounded search budget, then the
+head continues to extend it. Already displayed geometry is never backtracked.
+Collision detection retains all still-visible tail geometry, including the fade
+zone; entire old segments are released conservatively once fully behind the tail.
+The solid stroke keeps a gap from non-neighboring sections, while blur halos may
+blend. Earlier locations can be revisited only after their trail has disappeared.
 
-The visible stroke is now 38 units wide with a 13-unit Gaussian blur. Collision
-spacing accounts for the solid stroke width; translucent blur halos may overlap.
-Fixed radii refer to the centerline, not the edges of the expanded stroke.
+When no valid continuation remains, the entire visible line fades immediately
+and a new seeded attempt starts. The head does not wait for the tail to clear.
+Retries continue for as long as the document is active. Some routes end before
+they reach the tail threshold, depending on their geometry.
 
-Self-avoidance produces open curls and sweeps, rather than crossing loops.
-This is a scaffold for tuning the visual style, not a reproduction of the reference.
+Reduced-motion mode shows one static path with no recurring animation. Background
+frame gaps are capped to avoid large jumps on return. Frame callbacks and media
+listeners are cleaned up on document disposal.
+
+## Settings
+
+Edit `config.js` and rebuild:
+
+| Setting | Effect |
+| --- | --- |
+| `trailLength` | Distance drawn before the beginning starts to fade |
+| `tailFadeLength` | Additional visible distance in the fading tail |
+| `speed` | Drawing speed in viewBox units per second |
+| `fadeDuration` | Whole-line fade before retry, in milliseconds |
+| `straightChance` | Chance of a short straight passage at a steering decision |
+| `turnEase` | Maximum change of turn per step during transitions |
+| `radii` | Two preferred circular turning sizes |
+| `minGap` | Gap between solid strokes |
+| `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
+| `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
+| `seed` | Null for random retries; an integer for a reproducible seed sequence |
+| `searchBudget`, `attempts` | Bounded opening-route exploration |
+
+A shorter trail threshold releases space sooner; a longer threshold keeps more
+of the drawing visible but can cause earlier collisions. The seed for the current
+attempt appears on the SVG root as `data-seed`.
+
+## Source structure
+
+- `build.mjs`: embeds all runtime functions and configuration into `hektor.svg`.
+- `trail.js`: bounded-memory distance-based walker, geometry slicing, planning.
+- `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.
+- `walker.js`: static full-route generator used for reduced motion.
+- `config.js`: appearance, geometry, length and timing settings.
+- `*.test.js`: geometry, bounded history, tail threshold, retry, and lifecycle checks.

@@ -11,7 +11,10 @@ export const CONFIG = {
   backgroundMiddle: "#c5eeeb",
   backgroundBottom: "#43c6bc",
   speed: 110,
-  holdDuration: 1200, // Pause at the completed drawing, in milliseconds.
+  trailLength: 2393, // Approximate perimeter of ICON_MOOVE_B.svg in native units.
+  tailFadeLength: 160, // Distance over which the trailing end becomes transparent.
+  straightChance: 0.22, // Chance of a short straight passage at a steering decision.
+  turnEase: 0.035, // Maximum change in turn per step; eases into/out of straights.
   fadeDuration: 1400, // Clear the old line before starting another.
   seed: null, // Fresh on load; set an integer to reproduce a route.
   stepLength: 18,

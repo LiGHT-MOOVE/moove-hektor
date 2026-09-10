@@ -2,6 +2,7 @@
 import { writeFile } from "node:fs/promises";
 import { CONFIG } from "./config.js";
 import { generateWalk } from "./walker.js";
+import { createTrail } from "./trail.js";
 import { initialize } from "./animation.js";
 
 const esc = value => String(value).replace(/[&<>"']/g, c => ({
@@ -9,7 +10,8 @@ const esc = value => String(value).replace(/[&<>"']/g, c => ({
 })[c]);
 
 function assemble(config) {
-  const script = `const generateWalk = ${generateWalk.toString()};\n(${initialize.toString()})(${JSON.stringify(config)});`;
+  const script = `const createTrail = ${createTrail.toString()};
+const generateWalk = ${generateWalk.toString()};\n(${initialize.toString()})(${JSON.stringify(config)});`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${config.width} ${config.height}" role="img" aria-labelledby="title desc">
   <title id="title">Moove — a wandering line</title>
@@ -23,9 +25,15 @@ function assemble(config) {
     <filter id="soften" filterUnits="userSpaceOnUse" x="0" y="0" width="${config.width}" height="${config.height}" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="${config.blur}"/>
     </filter>
+    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${config.width}" height="${config.height}" style="mask-type:luminance">
+      <g id="tail-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path id="tail-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
   </defs>
   <rect width="100%" height="100%" fill="url(#background)"/>
-  <path id="trail" fill="none" stroke="${esc(config.color)}" stroke-width="${config.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${config.opacity}" filter="url(#soften)"/>
+  <g id="drawing" opacity="${config.opacity}" filter="url(#soften)">
+  <path id="trail" fill="none" stroke="${esc(config.color)}" stroke-width="${config.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
+  </g>
   <script><![CDATA[${script.replaceAll("]]>", "]]]]><![CDATA[>")}]]></script>
 </svg>
 `;
@@ -33,9 +41,10 @@ function assemble(config) {
 
 async function main() {
   if (!Number.isFinite(CONFIG.speed) || CONFIG.speed <= 0) throw new Error("Speed must be positive");
-  if (![CONFIG.holdDuration, CONFIG.fadeDuration].every(n => Number.isFinite(n) && n >= 0)) {
+  if (![CONFIG.fadeDuration].every(n => Number.isFinite(n) && n >= 0)) {
     throw new Error("Cycle durations must be non-negative");
   }
+  createTrail({ ...CONFIG, seed: 1 });
   generateWalk({ ...CONFIG, seed: 1 }); // Validate configuration before writing.
   const svg = assemble(CONFIG);
   await writeFile(new URL("./hektor.svg", import.meta.url), svg, "utf8");

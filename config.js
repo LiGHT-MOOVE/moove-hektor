@@ -12,7 +12,9 @@ export const CONFIG = {
   backgroundBottom: "#43c6bc",
   speed: 110,
   trailLength: 2393, // Approximate perimeter of ICON_MOOVE_B.svg in native units.
-  tailFadeLength: 160, // Distance over which the trailing end becomes transparent.
+  headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
+  headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.
+  tailFadeLength: 160, // Always-on tail opacity ramp length, including before the tail moves.
   straightChance: 0.22, // Chance of a short straight passage at a steering decision.
   turnEase: 0.035, // Maximum change in turn per step; eases into/out of straights.
   fadeDuration: 1400, // Clear the old line before starting another.

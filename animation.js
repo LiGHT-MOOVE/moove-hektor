@@ -4,12 +4,19 @@ export function initialize(config) {
   const drawing = document.getElementById("drawing");
   const ramp = document.getElementById("tail-ramp");
   const body = document.getElementById("tail-body");
+  const headRamp = document.getElementById("head-ramp");
+  const headBody = document.getElementById("head-body");
   const preference = matchMedia("(prefers-reduced-motion: reduce)");
   const rampCount = 32;
   ramp.replaceChildren();
   const bands = Array.from({ length: rampCount }, () => {
     const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
     ramp.appendChild(node); return node;
+  });
+  headRamp.replaceChildren();
+  const headBands = Array.from({ length: rampCount }, () => {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    headRamp.appendChild(node); return node;
   });
   let walker, head = 0, cycle = 0, frame, previousTime, fading = false, fadeTime = 0, disposed = false;
 
@@ -21,10 +28,12 @@ export function initialize(config) {
     head = 0; previousTime = undefined; fading = false; fadeTime = 0;
     drawing.style.opacity = String(config.opacity);
     path.setAttribute("d", ""); body.setAttribute("d", "");
-    bands.forEach(node => node.setAttribute("d", ""));
+    [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
+    headBody.setAttribute("d", "");
     if (preference.matches) {
       const walk = generateWalk({ ...config, seed });
       path.setAttribute("d", walk.d); body.setAttribute("d", walk.d);
+      headBody.setAttribute("d", walk.d);
       return;
     }
     walker = createTrail({ ...config, seed });
@@ -33,13 +42,26 @@ export function initialize(config) {
 
   function render(state) {
     path.setAttribute("d", state.d);
-    const fadeEnd = Math.max(0, head - config.trailLength);
+    // A second mask multiplies the tail mask, including when both ramps overlap.
+    const headSpan = Math.min(config.headFadeLength, head - state.tail);
+    const headStart = head - headSpan;
+    headBody.setAttribute("d", walker.slice(state.tail, headStart));
+    for (let i = 0; i < rampCount; i++) {
+      const from = headStart + headSpan * i / rampCount;
+      const to = headStart + headSpan * (i + 1) / rampCount;
+      const opacity = Math.pow(1 - (i + 0.5) / rampCount, config.headFadePower);
+      const luminance = Math.round(255 * opacity);
+      headBands[i].setAttribute("d", walker.slice(from, to));
+      headBands[i].setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+    }
+    // Always taper the visible tail, including while its starting point is fixed.
+    const tailSpan = Math.min(config.tailFadeLength, head - state.tail);
+    const fadeEnd = state.tail + tailSpan;
     body.setAttribute("d", walker.slice(fadeEnd, head));
-    const rawTail = head - config.trailLength - config.tailFadeLength;
     for (let i = 0; i < rampCount; i++) {
       const from = state.tail + (fadeEnd - state.tail) * i / rampCount;
       const to = state.tail + (fadeEnd - state.tail) * (i + 1) / rampCount;
-      const luminance = Math.round(255 * Math.max(0, Math.min(1, ((from + to) / 2 - rawTail) / config.tailFadeLength)));
+      const luminance = Math.round(255 * (i + 0.5) / rampCount);
       bands[i].setAttribute("d", walker.slice(from, to));
       bands[i].setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
     }

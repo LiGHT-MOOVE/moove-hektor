@@ -15,10 +15,16 @@
       <g id="tail-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <path id="tail-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
+    <mask id="head-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1200" height="706" style="mask-type:luminance">
+      <path id="head-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+      <g id="head-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
   </defs>
   <rect width="100%" height="100%" fill="url(#background)"/>
   <g id="drawing" opacity="0.55" filter="url(#soften)">
+  <g mask="url(#head-mask)">
   <path id="trail" fill="none" stroke="#168c88" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
+  </g>
   </g>
   <script><![CDATA[const createTrail = function createTrail(config) {
   const { width, height, margin, stepLength: step, minGap, strokeWidth } = config;
@@ -353,12 +359,19 @@ const generateWalk = function generateWalk(config) {
   const drawing = document.getElementById("drawing");
   const ramp = document.getElementById("tail-ramp");
   const body = document.getElementById("tail-body");
+  const headRamp = document.getElementById("head-ramp");
+  const headBody = document.getElementById("head-body");
   const preference = matchMedia("(prefers-reduced-motion: reduce)");
   const rampCount = 32;
   ramp.replaceChildren();
   const bands = Array.from({ length: rampCount }, () => {
     const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
     ramp.appendChild(node); return node;
+  });
+  headRamp.replaceChildren();
+  const headBands = Array.from({ length: rampCount }, () => {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    headRamp.appendChild(node); return node;
   });
   let walker, head = 0, cycle = 0, frame, previousTime, fading = false, fadeTime = 0, disposed = false;
 
@@ -370,10 +383,12 @@ const generateWalk = function generateWalk(config) {
     head = 0; previousTime = undefined; fading = false; fadeTime = 0;
     drawing.style.opacity = String(config.opacity);
     path.setAttribute("d", ""); body.setAttribute("d", "");
-    bands.forEach(node => node.setAttribute("d", ""));
+    [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
+    headBody.setAttribute("d", "");
     if (preference.matches) {
       const walk = generateWalk({ ...config, seed });
       path.setAttribute("d", walk.d); body.setAttribute("d", walk.d);
+      headBody.setAttribute("d", walk.d);
       return;
     }
     walker = createTrail({ ...config, seed });
@@ -382,13 +397,26 @@ const generateWalk = function generateWalk(config) {
 
   function render(state) {
     path.setAttribute("d", state.d);
-    const fadeEnd = Math.max(0, head - config.trailLength);
+    // A second mask multiplies the tail mask, including when both ramps overlap.
+    const headSpan = Math.min(config.headFadeLength, head - state.tail);
+    const headStart = head - headSpan;
+    headBody.setAttribute("d", walker.slice(state.tail, headStart));
+    for (let i = 0; i < rampCount; i++) {
+      const from = headStart + headSpan * i / rampCount;
+      const to = headStart + headSpan * (i + 1) / rampCount;
+      const opacity = Math.pow(1 - (i + 0.5) / rampCount, config.headFadePower);
+      const luminance = Math.round(255 * opacity);
+      headBands[i].setAttribute("d", walker.slice(from, to));
+      headBands[i].setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+    }
+    // Always taper the visible tail, including while its starting point is fixed.
+    const tailSpan = Math.min(config.tailFadeLength, head - state.tail);
+    const fadeEnd = state.tail + tailSpan;
     body.setAttribute("d", walker.slice(fadeEnd, head));
-    const rawTail = head - config.trailLength - config.tailFadeLength;
     for (let i = 0; i < rampCount; i++) {
       const from = state.tail + (fadeEnd - state.tail) * i / rampCount;
       const to = state.tail + (fadeEnd - state.tail) * (i + 1) / rampCount;
-      const luminance = Math.round(255 * Math.max(0, Math.min(1, ((from + to) / 2 - rawTail) / config.tailFadeLength)));
+      const luminance = Math.round(255 * (i + 0.5) / rampCount);
       bands[i].setAttribute("d", walker.slice(from, to));
       bands[i].setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
     }
@@ -427,5 +455,5 @@ const generateWalk = function generateWalk(config) {
     preference.removeEventListener("change", onPreferenceChange);
   });
   reset();
-})({"width":1200,"height":706,"margin":54,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
+})({"width":1200,"height":706,"margin":54,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
 </svg>

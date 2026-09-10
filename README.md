@@ -27,10 +27,11 @@ chosen embedding and script method.
 
 ## Behavior
 
-The line starts fully visible. Once the head has travelled `trailLength` units,
-its beginning starts to fade. The fade follows distance travelled, never the age
-of individual segments. At the default speed, the initial threshold is reached
-after approximately 21.8 seconds, if the route survives that long.
+The visible tail always has an opacity ramp, even when its start is stationary.
+The ramp grows with very short paths, up to `tailFadeLength`, and then keeps that
+length as the tail begins moving. Tail removal follows distance travelled, never
+the age of individual segments. At the default speed, the tail starts moving after approximately 23.2 seconds,
+if the route survives that long.
 
 `trailLength` defaults to 2,393 units, approximately the measured perimeter of
 `ICON_MOOVE_B.svg` in its native viewBox. This is an aesthetic reference length,
@@ -38,14 +39,19 @@ not a promise that the walker traces the logo. `tailFadeLength` adds a 160-unit
 fade zone, making the maximum visible span 2,553 units:
 
 ```text
-opaque trail starts at = max(0, headDistance - trailLength)
 visible tail starts at = max(0, headDistance - trailLength - tailFadeLength)
+opaque trail starts at = min(headDistance, visibleTailStart + tailFadeLength)
 ```
 
 A single colored SVG path is cropped analytically to this interval. A separate
 luminance mask uses a fixed pool of 32 short bands to soften only the tail. Blur
 is applied after masking, preserving the soft edge. Geometry is never split into
-independently timed, fading colored strokes. No mask or path elements accumulate.
+independently timed, fading colored strokes. No mask or path elements accumulate. A second fixed pool of 32 mask bands ramps
+opacity down toward the head, giving the blurred stroke a visually tapered tip.
+This is an opacity taper, not a change to the geometric stroke width. Increase
+`headFadeLength` for a longer taper, or `headFadePower` for a finer tip. The two
+masks multiply safely even on short trails. Reduced-motion mode shows the full
+static stroke without an animated head taper.
 
 The walker mainly uses the two logo-inspired turning radii, 96 and 142 units.
 Occasional short straight passages ease curvature toward zero and back toward a
@@ -74,8 +80,10 @@ Edit `config.js` and rebuild:
 
 | Setting | Effect |
 | --- | --- |
-| `trailLength` | Distance drawn before the beginning starts to fade |
-| `tailFadeLength` | Additional visible distance in the fading tail |
+| `trailLength` | Full-opacity trail allowance, plus the tail fade zone before removal |
+| `tailFadeLength` | Always-on tail ramp length, including before tail removal |
+| `headFadeLength` | Leading opacity ramp length; 0 disables it (default 110) |
+| `headFadePower` | Ramp shape: 1 is linear; higher values make a finer tip (default 1.8) |
 | `speed` | Drawing speed in viewBox units per second |
 | `fadeDuration` | Whole-line fade before retry, in milliseconds |
 | `straightChance` | Chance of a short straight passage at a steering decision |

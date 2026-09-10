@@ -29,10 +29,16 @@ const generateWalk = ${generateWalk.toString()};\n(${initialize.toString()})(${J
       <g id="tail-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
       <path id="tail-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
+    <mask id="head-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${config.width}" height="${config.height}" style="mask-type:luminance">
+      <path id="head-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
+      <g id="head-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
   </defs>
   <rect width="100%" height="100%" fill="url(#background)"/>
   <g id="drawing" opacity="${config.opacity}" filter="url(#soften)">
+  <g mask="url(#head-mask)">
   <path id="trail" fill="none" stroke="${esc(config.color)}" stroke-width="${config.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
+  </g>
   </g>
   <script><![CDATA[${script.replaceAll("]]>", "]]]]><![CDATA[>")}]]></script>
 </svg>
@@ -43,6 +49,10 @@ async function main() {
   if (!Number.isFinite(CONFIG.speed) || CONFIG.speed <= 0) throw new Error("Speed must be positive");
   if (![CONFIG.fadeDuration].every(n => Number.isFinite(n) && n >= 0)) {
     throw new Error("Cycle durations must be non-negative");
+  }
+  if (!Number.isFinite(CONFIG.headFadeLength) || CONFIG.headFadeLength < 0 ||
+      !Number.isFinite(CONFIG.headFadePower) || CONFIG.headFadePower <= 0) {
+    throw new Error("Head fade length must be non-negative and power must be positive");
   }
   createTrail({ ...CONFIG, seed: 1 });
   generateWalk({ ...CONFIG, seed: 1 }); // Validate configuration before writing.

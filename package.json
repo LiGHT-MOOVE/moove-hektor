@@ -6,7 +6,6 @@
   "description": "Builds a self-contained SVG with a randomized, self-avoiding drawing animation",
   "engines": { "node": ">=18" },
   "scripts": {
-    "build": "node build.mjs",
-    "test": "node --test"
+    "build": "node build.mjs"
   }
 }

@@ -9,7 +9,6 @@ Requires Node.js 18 or newer.
 
 ```sh
 npm run build
-npm test
 ```
 
 Open `hektor.svg` in a browser, or embed it with an object:
@@ -147,4 +146,3 @@ attempt appears on the SVG root as `data-seed`.
 - `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.
 - `portals.js`: coordinate wrapping, relevant tile offsets, and periodic collision checks.
 - `config.js`: appearance, geometry, length and timing settings.
-- `*.test.js`: geometry, bounded history, tail threshold, retry, and lifecycle checks.

@@ -10,7 +10,7 @@ function harness(reduced=false, overrides={}) {
   const elements=Object.fromEntries(['trail','drawing','tail-ramp','tail-body','head-ramp','head-body'].map(id=>[id,node()]));
   const preference={matches:reduced,addEventListener:(_,fn)=>{change=fn;},removeEventListener(){}};
   vm.runInNewContext(`(${initialize.toString()})(config)`, {
-    config:{...CONFIG,wrapEdges:false,seed:42,trailLength:20,tailFadeLength:10,speed:100,fadeDuration:100,...overrides},
+    config:{...CONFIG,motifEnabled:false,wrapEdges:false,seed:42,trailLength:20,tailFadeLength:10,speed:100,fadeDuration:100,...overrides},
     document:{getElementById:id=>elements[id],createElementNS:node,documentElement:{dataset:{}}},
     matchMedia:()=>preference,
     generateWalk:()=>({d:'static'}),

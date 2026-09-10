@@ -1,3 +1,4 @@
+import { createMotif } from "./motif.js";
 import { createPortals } from "./portals.js";
 
 /** Distance-driven, bounded-memory walker. All helpers are embedded at build time. */
@@ -23,7 +24,10 @@ export function createTrail(config) {
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const clearance = minGap + strokeWidth;
   const neighbors = Math.ceil(clearance / step) + 2;
-  const maxTurn = step / Math.min(...config.radii);
+  // Validate the motif before including its curvature in collision tolerances.
+  if (config.motifEnabled) createMotif(config, () => 0.5);
+  const maxTurn = step / Math.min(...config.radii,
+    ...(config.motifEnabled ? config.motif.map(item => item.radius) : []));
   // Bound the exempt local neighborhood to less than a quarter turn.
   if (maxTurn * (neighbors + 1) >= Math.PI / 2) {
     throw new Error("Radii too small for the stroke width, gap, and step length");
@@ -44,16 +48,16 @@ export function createTrail(config) {
     return Math.min(distanceToSegment(a, c, d), distanceToSegment(b, c, d),
       distanceToSegment(c, a, b), distanceToSegment(d, a, b));
   }
-  function propose(p, heading, turn) {
+  function propose(p, heading, turn, arcLength = step) {
     const points = [p];
     for (let i = 1; i <= subdivisions; i++) {
       const f = i / subdivisions;
       // Stable circular-arc evaluation, including nearly straight steps.
       const half = turn * f / 2;
-      const length = step * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
+      const length = arcLength * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
       points.push({ x: p.x + length * Math.cos(heading + half), y: p.y + length * Math.sin(heading + half) });
     }
-    return { points, turn, end: points.at(-1) };
+    return { points, turn, length: arcLength, end: points.at(-1) };
   }
   function valid(candidate, mesh, arcIndex) {
     if (!portals) for (const p of candidate.points) {
@@ -88,6 +92,7 @@ export function createTrail(config) {
   let turn = turns[Math.floor(random() * turns.length)];
   let target = turn, straightLeft = 0, nextChoice = 10;
   let arcs = [], mesh = [], endDistance = 0, head = 0, blocked = false, index = 0;
+  const motif = config.motifEnabled ? createMotif(config,random) : null;
   const approach = targetTurn => turn + clamp(targetTurn - turn, -config.turnEase, config.turnEase);
 
   function options() {
@@ -120,16 +125,41 @@ export function createTrail(config) {
     return [...preferred, ...candidates.filter(curve => !preferred.includes(curve))];
   }
   function commit(chosen) {
-    arcs.push({ ...chosen, start: p, heading, from: endDistance, to: endDistance + step, id: index });
+    arcs.push({ ...chosen, start: p, heading, from: endDistance, to: endDistance + chosen.length, id: index });
     for (let j=1; j<chosen.points.length; j++) mesh.push({ a:chosen.points[j-1], b:chosen.points[j], arc:index });
     p = portals ? portals.canonical(chosen.end) : chosen.end; heading += chosen.turn; turn = chosen.turn;
-    endDistance += step; index++;
+    endDistance += chosen.length; index++;
   }
 
+  function motifHasRoom(instruction) {
+    let point=p, direction=heading, remaining=instruction.remainingLength, aheadIndex=index;
+    const future=[];
+    while (remaining > 1e-8) {
+      const length=Math.min(step,remaining);
+      const curve=propose(point,direction,Math.sign(instruction.turn)*length/instruction.radius,length);
+      if (!valid(curve,mesh,aheadIndex) || !valid(curve,future,aheadIndex)) return false;
+      for(let j=1;j<curve.points.length;j++) future.push({a:curve.points[j-1],b:curve.points[j],arc:aheadIndex});
+      point=portals?portals.canonical(curve.end):curve.end;
+      direction+=curve.turn;remaining-=length;aheadIndex++;
+    }
+    return true;
+  }
   function extend() {
+    if (motif) {
+      const instruction=motif.peek();
+      const curve=propose(p,heading,instruction.turn,instruction.length);
+      const sectionStart = instruction.remainingLength ===
+        Math.abs(config.motif[instruction.index].sweep) * instruction.radius;
+      if (valid(curve,mesh,index) && (!(instruction.interrupted || sectionStart) || motifHasRoom(instruction))) {
+        commit({...curve,source:'motif',motifIndex:instruction.index});
+        motif.consume(instruction.length);
+        return;
+      }
+      motif.interrupt();
+    }
     const chosen = options()[0];
     if (!chosen) { blocked = true; return; }
-    commit(chosen);
+    commit({...chosen,source:'avoidance'});
   }
   function snapshot() {
     return { p, heading, turn, target, straightLeft, nextChoice, endDistance, index };
@@ -138,37 +168,41 @@ export function createTrail(config) {
     ({ p, heading, turn, target, straightLeft, nextChoice, endDistance, index } = saved);
     arcs.length = index; mesh.length = index * subdivisions;
   }
-  // Explore an unseen opening route so early local dead ends do not dominate.
-  // The retained route is bounded by the visible trail length plus one step.
-  const openingSteps = Math.ceil((config.trailLength + config.tailFadeLength) / step) + 1;
-  let best;
-  for (let attempt = 0; attempt < config.attempts; attempt++) {
-    p = { x: width * (0.3 + random() * 0.4), y: height * (0.3 + random() * 0.4) };
-    heading = random() * Math.PI * 2; turn = turns[Math.floor(random() * turns.length)];
-    target = turn; straightLeft = 0; nextChoice = 10; endDistance = 0; index = 0;
-    arcs = []; mesh = [];
-    let first = options();
-    const stack = [{ saved: snapshot(), choices: first }];
-    for (let work = 0; work < config.searchBudget && stack.length; work++) {
-      const node = stack.at(-1);
-      restore(node.saved);
-      if (!node.choices.length) { stack.pop(); continue; }
-      commit(node.choices.shift());
-      if (!best || index > best.saved.index) best = { saved: snapshot(), arcs: arcs.slice(), mesh: mesh.slice() };
-      if (index >= openingSteps) break;
-      const next = options();
-      stack.push({ saved: snapshot(), choices: next });
+  if (!motif) {
+    // Explore an unseen opening route so early local dead ends do not dominate.
+    // The retained route is bounded by the visible trail length plus one step.
+    const openingSteps = Math.ceil((config.trailLength + config.tailFadeLength) / step) + 1;
+    let best;
+    for (let attempt = 0; attempt < config.attempts; attempt++) {
+      p = { x: width * (0.3 + random() * 0.4), y: height * (0.3 + random() * 0.4) };
+      heading = random() * Math.PI * 2; turn = turns[Math.floor(random() * turns.length)];
+      target = turn; straightLeft = 0; nextChoice = 10; endDistance = 0; index = 0;
+      arcs = []; mesh = [];
+      let first = options();
+      const stack = [{ saved: snapshot(), choices: first }];
+      for (let work = 0; work < config.searchBudget && stack.length; work++) {
+        const node = stack.at(-1);
+        restore(node.saved);
+        if (!node.choices.length) { stack.pop(); continue; }
+        commit(node.choices.shift());
+        if (!best || index > best.saved.index) best = { saved: snapshot(), arcs: arcs.slice(), mesh: mesh.slice() };
+        if (index >= openingSteps) break;
+        const next = options();
+        stack.push({ saved: snapshot(), choices: next });
+      }
+      if (best?.saved.index >= openingSteps) break;
     }
-    if (best?.saved.index >= openingSteps) break;
+    if (best) {
+      arcs = best.arcs; mesh = best.mesh; restore(best.saved);
+    } else { arcs = []; mesh = []; index = 0; endDistance = 0; blocked = true; }
+
   }
-  if (best) {
-    arcs = best.arcs; mesh = best.mesh; restore(best.saved);
-  } else { arcs = []; mesh = []; index = 0; endDistance = 0; blocked = true; }
 
   function pointAt(arc, distance) {
-    const f = clamp((distance - arc.from) / step, 0, 1);
+    const arcLength=arc.to-arc.from;
+    const f = clamp((distance - arc.from) / arcLength, 0, 1);
     const half = arc.turn * f / 2;
-    const length = step * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
+    const length = arcLength * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
     return { x: arc.start.x + length * Math.cos(arc.heading + half),
       y: arc.start.y + length * Math.sin(arc.heading + half) };
   }
@@ -177,7 +211,7 @@ export function createTrail(config) {
     function command(arc, piece, fresh) {
       let result = fresh ? ` M ${piece.start.x} ${piece.start.y}` : "";
       if (Math.abs(arc.turn) < 1e-10) return result + ` L ${piece.end.x} ${piece.end.y}`;
-      const radius = step / Math.abs(arc.turn);
+      const radius = (arc.to-arc.from) / Math.abs(arc.turn);
       return result + ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${piece.end.x} ${piece.end.y}`;
     }
     for (const arc of arcs) {

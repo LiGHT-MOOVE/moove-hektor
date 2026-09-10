@@ -32,7 +32,7 @@ export function initialize(config) {
     headBody.setAttribute("d", "");
     if (preference.matches) {
       let d;
-      if (config.wrapEdges) {
+      if (config.wrapEdges || config.motifEnabled) {
         const still = createTrail({ ...config, seed });
         let state;
         for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {

@@ -49,12 +49,14 @@ test('curved crossings preserve arc length and provide out-of-frame blur fragmen
 test('wrapped routes cross portals, keep bounded coordinates, and avoid all subpaths periodically',()=>{
   const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
   let crossings=0;
-  for(const seed of [0,1,4]) {
-    const walker=createTrail({...CONFIG,seed});
+  for(const motifEnabled of [false,true]) for(const seed of [0,1,4]) {
+    const walker=createTrail({...CONFIG,motifEnabled,seed});
     for(let head=18,count=0;head<12000;head+=18,count++) {
       const state=walker.advance(head);
       if(count%40===0 || state.blocked) {
-        assert.ok(state.arcs.length<=Math.ceil((CONFIG.trailLength+CONFIG.tailFadeLength)/CONFIG.stepLength)+2);
+        const window = CONFIG.trailLength + CONFIG.tailFadeLength;
+        const partialSteps = motifEnabled ? Math.ceil(window / Math.min(...CONFIG.motif.map(item => item.radius * Math.abs(item.sweep)))) + 1 : 0;
+        assert.ok(state.arcs.length <= Math.ceil(window / CONFIG.stepLength) + partialSteps + 2);
         for(const arc of state.arcs) {
           assert.ok(arc.start.x>=0 && arc.start.x<CONFIG.width && arc.start.y>=0 && arc.start.y<CONFIG.height);
           if(arc.end.x<0 || arc.end.x>CONFIG.width || arc.end.y<0 || arc.end.y>CONFIG.height) crossings++;

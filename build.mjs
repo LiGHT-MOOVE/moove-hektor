@@ -2,6 +2,7 @@
 import { writeFile } from "node:fs/promises";
 import { CONFIG } from "./config.js";
 import { generateWalk } from "./walker.js";
+import { createMotif } from "./motif.js";
 import { createPortals } from "./portals.js";
 import { createTrail } from "./trail.js";
 import { initialize } from "./animation.js";
@@ -13,7 +14,8 @@ const esc = value => String(value).replace(/[&<>"']/g, c => ({
 function assemble(config) {
   const padding = config.wrapEdges ? config.strokeWidth / 2 + 4 * config.blur + 4 : 0;
   const region = `x="${-padding}" y="${-padding}" width="${config.width + 2*padding}" height="${config.height + 2*padding}"`;
-  const script = `const createPortals = ${createPortals.toString()};
+  const script = `const createMotif = ${createMotif.toString()};
+const createPortals = ${createPortals.toString()};
 const createTrail = ${createTrail.toString()};
 const generateWalk = ${generateWalk.toString()};\n(${initialize.toString()})(${JSON.stringify(config)});`;
   return `<?xml version="1.0" encoding="UTF-8"?>

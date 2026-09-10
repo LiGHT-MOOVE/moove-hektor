@@ -53,13 +53,20 @@ This is an opacity taper, not a change to the geometric stroke width. Increase
 masks multiply safely even on short trails. Reduced-motion mode shows the full
 static stroke without an animated head taper.
 
-The walker mainly uses the two logo-inspired turning radii, 96 and 142 units.
-Occasional short straight passages ease curvature toward zero and back toward a
-preferred radius. Tangents stay continuous; intermediate radii during these
-transitions are intentional. The reverted straight-first behavior is not used.
+The default movement repeats two signed circular turns: a small outward
+half-turn (radius 96), then a larger inward half-turn (radius 142). This echoes
+the logo's alternating convex lobes and concave connections without targeting
+an exact outline. Each attempt randomizes its starting section and can mirror
+the sequence. Turns join with continuous tangents, and their final step is
+shortened to finish the configured sweep exactly.
 
-An unseen opening route is explored within a bounded search budget, then the
-head continues to extend it. Already displayed geometry is never backtracked.
+Before starting a section, the walker checks that the arc has room. If blocked,
+the existing local steering takes over, including occasional eased straights.
+The interrupted section restarts from the current position and heading once
+there is room for it. No target positions or rejoining paths are stored.
+
+Set `motifEnabled: false` to restore the free walker and its bounded opening-route
+search. Already displayed geometry is never backtracked.
 Collision detection retains all still-visible tail geometry, including the fade
 zone; entire old segments are released conservatively once fully behind the tail.
 The solid stroke keeps a gap from non-neighboring sections, while blur halos may
@@ -107,7 +114,10 @@ Edit `config.js` and rebuild:
 | `headFadePower` | Ramp shape: 1 is linear; higher values make a finer tip (default 1.8) |
 | `speed` | Drawing speed in viewBox units per second |
 | `fadeDuration` | Whole-line fade before retry, in milliseconds |
-| `straightChance` | Chance of a short straight passage at a steering decision |
+| `motifEnabled` | Prefer the repeating motif; false restores free movement |
+| `motif` | Ordered `{ radius, sweep }` turns; signed sweeps in radians, diameter = twice radius |
+| `motifRandomStart`, `motifMirror` | Vary the starting section and mirror per attempt |
+| `straightChance` | Chance of a short straight passage during free steering |
 | `turnEase` | Maximum change of turn per step during transitions |
 | `radii` | Two preferred circular turning sizes |
 | `wrapEdges` | Connect opposite edges; false restores solid boundaries |
@@ -116,7 +126,7 @@ Edit `config.js` and rebuild:
 | `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
 | `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
 | `seed` | Null for random retries; an integer for a reproducible seed sequence |
-| `searchBudget`, `attempts` | Bounded opening-route exploration |
+| `searchBudget`, `attempts` | Bounded opening-route exploration when motif is disabled |
 
 A shorter trail threshold releases space sooner; a longer threshold keeps more
 of the drawing visible but can cause earlier collisions. The seed for the current
@@ -125,6 +135,7 @@ attempt appears on the SVG root as `data-seed`.
 ## Source structure
 
 - `build.mjs`: embeds all runtime functions and configuration into `hektor.svg`.
+- `motif.js`: repeating turn sequence and interrupted-section progress.
 - `trail.js`: bounded-memory distance-based walker, geometry slicing, planning.
 - `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.
 - `portals.js`: exact curve splitting, local blur fragments, and periodic collision checks.

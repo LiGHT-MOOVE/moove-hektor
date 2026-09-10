@@ -4,7 +4,7 @@ import { createTrail } from './trail.js';
 import { CONFIG } from './config.js';
 
 test('distance controls the tail, memory is bounded, and stopped routes do not wait', () => {
-  const walker = createTrail({ ...CONFIG, wrapEdges:false, seed: 1 });
+  const walker = createTrail({ ...CONFIG, motifEnabled:false, wrapEdges:false, seed: 1 });
   let state, faded = false;
   for (let head = 9; head < 18000; head += 9) {
     state = walker.advance(head);
@@ -25,8 +25,8 @@ test('distance controls the tail, memory is bounded, and stopped routes do not w
 });
 
 test('geometry is seeded, independent of drawing speed, and includes short straights', () => {
-  const a = createTrail({ ...CONFIG, wrapEdges:false, seed: 4 });
-  const b = createTrail({ ...CONFIG, wrapEdges:false, seed: 4, speed: CONFIG.speed * 2 });
+  const a = createTrail({ ...CONFIG, motifEnabled:false, wrapEdges:false, seed: 4 });
+  const b = createTrail({ ...CONFIG, motifEnabled:false, wrapEdges:false, seed: 4, speed: CONFIG.speed * 2 });
   let straight = false;
   for (let head = 18; head < 4000; head += 18) {
     const x = a.advance(head), y = b.advance(head);
@@ -45,7 +45,7 @@ test('geometry is seeded, independent of drawing speed, and includes short strai
 test('visible and planned geometry stays in bounds and never crosses itself', () => {
   const cross = (a,b,c) => (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
   for (const seed of [0,1,4]) {
-    const walker = createTrail({ ...CONFIG, wrapEdges: false, seed });
+    const walker = createTrail({ ...CONFIG, motifEnabled:false, wrapEdges: false, seed });
     for (let head = 18, count = 0; head < 10000; head += 18, count++) {
       const state = walker.advance(head);
       if (count % 30 === 0 || state.blocked) {

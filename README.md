@@ -13,7 +13,9 @@ npm run build
 npm test
 ```
 
-Open `hektor.svg` in a browser. Reload to generate another route. After changing
+Open `hektor.svg` in a browser. Each line draws until its route is blocked, holds
+for 1.2 seconds, fades out over 1.4 seconds, then starts a new random drawing.
+Reloading also generates another route. After changing
 the source or configuration, rebuild the SVG. The build writes next to `build.mjs`,
 regardless of the directory from which it is invoked.
 
@@ -46,8 +48,10 @@ For a strict policy, move the runtime into an allowed external script.
 
 The build packages code, not a fixed route. On each SVG document load, the runtime
 chooses a fresh seed with `crypto.getRandomValues`, generates several bounded
-attempts, and uses the longest route. It then animates the stroke at constant
-distance per second. Reduced-motion preference shows the completed route.
+attempts, and uses the longest route. The selected route is then extended until none of the four allowed next arcs
+fits. It animates at constant distance per second and repeats after a hold and
+fade. Each cycle clears the old line; drawings do not accumulate. Reduced-motion
+preference shows one completed route and disables the cycle.
 
 The walker takes short circular-arc steps with matching tangents, using exactly
 two radii: 96 and 142 viewBox units. Their ratio follows the approximately 64 and
@@ -72,12 +76,16 @@ limits for your target devices.
 ## Customize
 
 - Set `seed` to `null` for new routes, or an integer for repeatable output. The
-  active seed is recorded on the SVG root as `data-seed`.
+  active seed is recorded on the SVG root as `data-seed`. A fixed seed reproduces
+  the sequence: each successive cycle increments that seed.
 - Increase `minGap` for more open compositions.
 - Adjust the two `radii` for the inner/outer bend sizes. Invalid combinations of
   small radii and large spacing are rejected rather than silently changing radii.
-- Adjust `maxSteps`, `attempts`, and `searchBudget` for length versus startup work.
-  The target is 9,000 units; available space can produce a shorter valid result.
+- Adjust `attempts` and `searchBudget` for route exploration versus startup work.
+  There is no configured length cutoff. After exploration, the chosen route grows
+  until blocked by existing strokes or the boundary under the fixed step/radius
+  rules. This is a locally exhausted route, not a globally longest-path guarantee.
+- Adjust `holdDuration` and `fadeDuration` (milliseconds) for the repeat timing.
 - Adjust `speed`, `color`, `strokeWidth`, `opacity`, and `blur` for the soft stroke.
 - Adjust `backgroundTop`, `backgroundMiddle`, and `backgroundBottom` for the
   vertical light-to-teal gradient. Everything is vector-based and embedded;

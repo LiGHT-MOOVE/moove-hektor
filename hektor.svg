@@ -19,7 +19,7 @@
   if (![width, height, margin, step, minGap, strokeWidth].every(Number.isFinite) ||
       step <= 0 || minGap < 0 || strokeWidth <= 0 || margin < strokeWidth / 2 ||
       width <= margin * 2 || height <= margin * 2 ||
-      ![config.maxSteps, config.searchBudget, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
+      ![config.searchBudget, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
       !Array.isArray(config.radii) || config.radii.length !== 2 ||
       !config.radii.every(r => Number.isFinite(r) && r > 0)) {
     throw new Error("Invalid walker configuration");
@@ -110,15 +110,36 @@
       }
       arcs.push(candidate);
       if (arcs.length > best.arcs.length) {
-        best = { arcs: arcs.slice(), mesh: mesh.slice(), start, length: arcs.length * step };
+        best = { arcs: arcs.slice(), mesh: mesh.slice(), start, heading: current.heading + turn, length: arcs.length * step };
       }
-      if (arcs.length === config.maxSteps) break;
       // Change steering preference after a randomly sized run, never the radii.
       const preferred = random() < 0.13 ? turns[Math.floor(random() * turns.length)] : turn;
       stack.push({ p: candidate.end, heading: current.heading + turn, options: choices(preferred) });
     }
-    if (best.arcs.length === config.maxSteps) break;
   }
+  // Search is bounded, but the chosen route has no arbitrary length cutoff.
+  // Extend it until ALL four permitted turns are blocked at the current head.
+  if (best.arcs.length) {
+    let p = best.arcs.at(-1).end;
+    let heading = best.heading;
+    let previous = best.arcs.at(-1).turn;
+    while (true) {
+      const preferred = random() < 0.13 ? turns[Math.floor(random() * turns.length)] : previous;
+      const candidate = choices(preferred).map(turn => propose(p, heading, turn))
+        .find(curve => valid(curve, best.mesh, best.arcs.length));
+      if (!candidate) break;
+      for (let j = 1; j < candidate.points.length; j++) {
+        best.mesh.push({ a: candidate.points[j - 1], b: candidate.points[j], arc: best.arcs.length });
+      }
+      best.arcs.push(candidate);
+      p = candidate.end;
+      heading += candidate.turn;
+      previous = candidate.turn;
+    }
+    best.heading = heading;
+    best.length = best.arcs.length * step;
+  }
+  best.stopReason = "blocked";
   best.d = best.start ? `M ${best.start.x} ${best.start.y}` : "";
   for (const arc of best.arcs) {
     const radius = step / Math.abs(arc.turn);
@@ -127,22 +148,67 @@
   return best;
 };
 (function initialize(config) {
-  const seed = config.seed ?? crypto.getRandomValues(new Uint32Array(1))[0];
   const path = document.getElementById("trail");
-  const walk = generateWalk({ ...config, seed });
-  document.documentElement.dataset.seed = String(seed);
-  path.setAttribute("d", walk.d);
-  if (!walk.length) return;
-  const length = path.getTotalLength();
   const preference = matchMedia("(prefers-reduced-motion: reduce)");
-  if (preference.matches) return;
-  path.style.strokeDasharray = `${length} ${length}`;
-  const animation = path.animate([
-    { strokeDashoffset: String(length) },
-    { strokeDashoffset: "0" },
-  ], { duration: length / config.speed * 1000, easing: "linear", fill: "both" });
-  preference.addEventListener("change", event => {
-    if (event.matches) animation.finish();
-  });
-})({"width":1200,"height":706,"margin":54,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"maxSteps":500,"searchBudget":2400,"attempts":6});]]></script>
+  let animation;
+  let timer;
+  let cycle = 0;
+  let disposed = false;
+
+  function clearPlayback() {
+    clearTimeout(timer);
+    if (animation) {
+      animation.onfinish = null;
+      animation.cancel();
+      animation = null;
+    }
+    path.style.strokeDasharray = "none";
+    path.style.strokeDashoffset = "0";
+    path.style.opacity = String(config.opacity);
+  }
+
+  function startCycle() {
+    if (disposed) return;
+    clearPlayback();
+    // A configured seed reproduces the sequence, with a new route each cycle.
+    const seed = config.seed == null ? crypto.getRandomValues(new Uint32Array(1))[0]
+      : (config.seed + cycle) >>> 0;
+    cycle++;
+    const walk = generateWalk({ ...config, seed });
+    document.documentElement.dataset.seed = String(seed);
+    path.setAttribute("d", walk.d);
+    if (!walk.length || preference.matches) return;
+    const length = path.getTotalLength();
+    path.style.strokeDasharray = `${length} ${length}`;
+    animation = path.animate([
+      { strokeDashoffset: String(length) },
+      { strokeDashoffset: "0" },
+    ], { duration: length / config.speed * 1000, easing: "linear", fill: "both" });
+    animation.onfinish = () => {
+      if (disposed || preference.matches) return;
+      timer = setTimeout(() => {
+        if (disposed || preference.matches) return;
+        clearPlayback();
+        animation = path.animate([
+          { opacity: config.opacity }, { opacity: 0 },
+        ], { duration: config.fadeDuration, easing: "ease-in-out", fill: "both" });
+        animation.onfinish = startCycle;
+      }, config.holdDuration);
+    };
+  }
+
+  function onPreferenceChange() {
+    if (preference.matches) clearPlayback(); // One static, complete drawing.
+    else startCycle();
+  }
+  preference.addEventListener("change", onPreferenceChange);
+  window.addEventListener("pagehide", event => {
+    // A bfcache page is suspended by the browser and may resume later.
+    if (event.persisted) return;
+    disposed = true;
+    clearPlayback();
+    preference.removeEventListener("change", onPreferenceChange);
+  }, { once: true });
+  startCycle();
+})({"width":1200,"height":706,"margin":54,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"holdDuration":1200,"fadeDuration":1400,"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
 </svg>

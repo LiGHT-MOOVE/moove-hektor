@@ -8,7 +8,7 @@ export function generateWalk(config) {
   if (![width, height, margin, step, minGap, strokeWidth].every(Number.isFinite) ||
       step <= 0 || minGap < 0 || strokeWidth <= 0 || margin < strokeWidth / 2 ||
       width <= margin * 2 || height <= margin * 2 ||
-      ![config.maxSteps, config.searchBudget, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
+      ![config.searchBudget, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
       !Array.isArray(config.radii) || config.radii.length !== 2 ||
       !config.radii.every(r => Number.isFinite(r) && r > 0)) {
     throw new Error("Invalid walker configuration");
@@ -99,15 +99,36 @@ export function generateWalk(config) {
       }
       arcs.push(candidate);
       if (arcs.length > best.arcs.length) {
-        best = { arcs: arcs.slice(), mesh: mesh.slice(), start, length: arcs.length * step };
+        best = { arcs: arcs.slice(), mesh: mesh.slice(), start, heading: current.heading + turn, length: arcs.length * step };
       }
-      if (arcs.length === config.maxSteps) break;
       // Change steering preference after a randomly sized run, never the radii.
       const preferred = random() < 0.13 ? turns[Math.floor(random() * turns.length)] : turn;
       stack.push({ p: candidate.end, heading: current.heading + turn, options: choices(preferred) });
     }
-    if (best.arcs.length === config.maxSteps) break;
   }
+  // Search is bounded, but the chosen route has no arbitrary length cutoff.
+  // Extend it until ALL four permitted turns are blocked at the current head.
+  if (best.arcs.length) {
+    let p = best.arcs.at(-1).end;
+    let heading = best.heading;
+    let previous = best.arcs.at(-1).turn;
+    while (true) {
+      const preferred = random() < 0.13 ? turns[Math.floor(random() * turns.length)] : previous;
+      const candidate = choices(preferred).map(turn => propose(p, heading, turn))
+        .find(curve => valid(curve, best.mesh, best.arcs.length));
+      if (!candidate) break;
+      for (let j = 1; j < candidate.points.length; j++) {
+        best.mesh.push({ a: candidate.points[j - 1], b: candidate.points[j], arc: best.arcs.length });
+      }
+      best.arcs.push(candidate);
+      p = candidate.end;
+      heading += candidate.turn;
+      previous = candidate.turn;
+    }
+    best.heading = heading;
+    best.length = best.arcs.length * step;
+  }
+  best.stopReason = "blocked";
   best.d = best.start ? `M ${best.start.x} ${best.start.y}` : "";
   for (const arc of best.arcs) {
     const radius = step / Math.abs(arc.turn);

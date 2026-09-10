@@ -33,6 +33,9 @@ function assemble(config) {
 
 async function main() {
   if (!Number.isFinite(CONFIG.speed) || CONFIG.speed <= 0) throw new Error("Speed must be positive");
+  if (![CONFIG.holdDuration, CONFIG.fadeDuration].every(n => Number.isFinite(n) && n >= 0)) {
+    throw new Error("Cycle durations must be non-negative");
+  }
   generateWalk({ ...CONFIG, seed: 1 }); // Validate configuration before writing.
   const svg = assemble(CONFIG);
   await writeFile(new URL("./hektor.svg", import.meta.url), svg, "utf8");

@@ -11,11 +11,12 @@ export const CONFIG = {
   backgroundMiddle: "#c5eeeb",
   backgroundBottom: "#43c6bc",
   speed: 110,
+  holdDuration: 1200, // Pause at the completed drawing, in milliseconds.
+  fadeDuration: 1400, // Clear the old line before starting another.
   seed: null, // Fresh on load; set an integer to reproduce a route.
   stepLength: 18,
   minGap: 18, // Gap between solid strokes; soft blur halos may overlap.
   radii: [96, 142], // Logo-inspired ratio: approximately 64 : 94.5.
-  maxSteps: 500,
   searchBudget: 2400, // Bounded candidate/backtracking operations per attempt.
   attempts: 6,
 };

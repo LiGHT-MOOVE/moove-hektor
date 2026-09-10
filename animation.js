@@ -31,9 +31,18 @@ export function initialize(config) {
     [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
     headBody.setAttribute("d", "");
     if (preference.matches) {
-      const walk = generateWalk({ ...config, seed });
-      path.setAttribute("d", walk.d); body.setAttribute("d", walk.d);
-      headBody.setAttribute("d", walk.d);
+      let d;
+      if (config.wrapEdges) {
+        const still = createTrail({ ...config, seed });
+        let state;
+        for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {
+          state = still.advance(distance);
+          if (state.blocked) break;
+        }
+        d = state?.d ?? "";
+      } else d = generateWalk({ ...config, seed }).d;
+      path.setAttribute("d", d); body.setAttribute("d", d);
+      headBody.setAttribute("d", d);
       return;
     }
     walker = createTrail({ ...config, seed });

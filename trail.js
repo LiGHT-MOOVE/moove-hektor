@@ -1,3 +1,5 @@
+import { createPortals } from "./portals.js";
+
 /** Distance-driven, bounded-memory walker. All helpers are embedded at build time. */
 export function createTrail(config) {
   const { width, height, margin, stepLength: step, minGap, strokeWidth } = config;
@@ -9,6 +11,8 @@ export function createTrail(config) {
       !config.radii.every(r => Number.isFinite(r) && r > 0)) {
     throw new Error("Invalid walker configuration");
   }
+  const padding = strokeWidth / 2 + 4 * config.blur + 4;
+  const portals = config.wrapEdges ? createPortals(width, height, padding) : null;
   let state = config.seed >>> 0;
   function random() {
     state += 0x6D2B79F5;
@@ -23,6 +27,9 @@ export function createTrail(config) {
   // Bound the exempt local neighborhood to less than a quarter turn.
   if (maxTurn * (neighbors + 1) >= Math.PI / 2) {
     throw new Error("Radii too small for the stroke width, gap, and step length");
+  }
+  if (portals && Math.min(width, height) <= 2 * ((neighbors + 1) * step + clearance)) {
+    throw new Error("Portal viewport too small for the local stroke neighborhood");
   }
   const subdivisions = 4;
   const error = step * maxTurn / (8 * subdivisions ** 2);
@@ -49,7 +56,7 @@ export function createTrail(config) {
     return { points, turn, end: points.at(-1) };
   }
   function valid(candidate, mesh, arcIndex) {
-    for (const p of candidate.points) {
+    if (!portals) for (const p of candidate.points) {
       if (p.x < margin + error || p.x > width - margin - error ||
           p.y < margin + error || p.y > height - margin - error) return false;
     }
@@ -58,6 +65,10 @@ export function createTrail(config) {
       for (const segment of mesh) {
         if (arcIndex - segment.arc < neighbors) continue;
         const gap = clearance + 2 * error;
+        if (portals) {
+          if (portals.collides(a, b, segment.a, segment.b, gap)) return false;
+          continue;
+        }
         if (Math.max(a.x, b.x) + gap < Math.min(segment.a.x, segment.b.x) ||
             Math.min(a.x, b.x) - gap > Math.max(segment.a.x, segment.b.x) ||
             Math.max(a.y, b.y) + gap < Math.min(segment.a.y, segment.b.y) ||
@@ -111,7 +122,7 @@ export function createTrail(config) {
   function commit(chosen) {
     arcs.push({ ...chosen, start: p, heading, from: endDistance, to: endDistance + step, id: index });
     for (let j=1; j<chosen.points.length; j++) mesh.push({ a:chosen.points[j-1], b:chosen.points[j], arc:index });
-    p = chosen.end; heading += chosen.turn; turn = chosen.turn;
+    p = portals ? portals.canonical(chosen.end) : chosen.end; heading += chosen.turn; turn = chosen.turn;
     endDistance += step; index++;
   }
 
@@ -162,19 +173,27 @@ export function createTrail(config) {
       y: arc.start.y + length * Math.sin(arc.heading + half) };
   }
   function slice(from, to) {
-    let d = "";
+    let d = "", ghosts = "", last;
+    function command(arc, piece, fresh) {
+      let result = fresh ? ` M ${piece.start.x} ${piece.start.y}` : "";
+      if (Math.abs(arc.turn) < 1e-10) return result + ` L ${piece.end.x} ${piece.end.y}`;
+      const radius = step / Math.abs(arc.turn);
+      return result + ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${piece.end.x} ${piece.end.y}`;
+    }
     for (const arc of arcs) {
       const a = Math.max(from, arc.from), b = Math.min(to, arc.to);
       if (b <= a) continue;
-      const start = pointAt(arc, a), end = pointAt(arc, b);
-      if (!d) d = `M ${start.x} ${start.y}`;
-      if (Math.abs(arc.turn) < 1e-10) d += ` L ${end.x} ${end.y}`;
-      else {
-        const radius = step / Math.abs(arc.turn);
-        d += ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${end.x} ${end.y}`;
+      const pieces = portals ? portals.split(arc, a, b, pointAt) :
+        [{ from:a, to:b, start:pointAt(arc,a), end:pointAt(arc,b) }];
+      for (const piece of pieces) {
+        const fresh = !last || Math.hypot(last.x-piece.start.x,last.y-piece.start.y)>1e-6;
+        d += command(arc,piece,fresh); last=piece.end;
+        if (portals) for (const fragment of portals.fragments(arc,piece,pointAt)) {
+          ghosts += command(arc,fragment,true);
+        }
       }
     }
-    return d;
+    return (d + ghosts).trim();
   }
   return {
     advance(distance) {

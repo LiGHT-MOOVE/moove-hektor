@@ -3,30 +3,117 @@
   <title id="title">Moove — a wandering line</title>
   <desc id="desc">A randomly generated smooth line draws itself without crossing its earlier route.</desc>
   <defs>
+    <clipPath id="viewport"><rect width="1200" height="706"/></clipPath>
     <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#eff9f9"/>
       <stop offset="48%" stop-color="#c5eeeb"/>
       <stop offset="100%" stop-color="#43c6bc"/>
     </linearGradient>
-    <filter id="soften" filterUnits="userSpaceOnUse" x="0" y="0" width="1200" height="706" color-interpolation-filters="sRGB">
+    <filter id="soften" filterUnits="userSpaceOnUse" x="-75" y="-75" width="1350" height="856" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="13"/>
     </filter>
-    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1200" height="706" style="mask-type:luminance">
+    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="-75" y="-75" width="1350" height="856" style="mask-type:luminance">
       <g id="tail-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <path id="tail-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
-    <mask id="head-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1200" height="706" style="mask-type:luminance">
+    <mask id="head-mask" maskUnits="userSpaceOnUse" x="-75" y="-75" width="1350" height="856" style="mask-type:luminance">
       <path id="head-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <g id="head-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
   </defs>
   <rect width="100%" height="100%" fill="url(#background)"/>
+  <g clip-path="url(#viewport)">
   <g id="drawing" opacity="0.55" filter="url(#soften)">
   <g mask="url(#head-mask)">
   <path id="trail" fill="none" stroke="#168c88" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
   </g>
   </g>
-  <script><![CDATA[const createTrail = function createTrail(config) {
+  </g>
+  <script><![CDATA[const createPortals = function createPortals(width, height, padding = 0) {
+  const wrap = (value, size) => ((value % size) + size) % size;
+  const canonical = p => ({ x: wrap(p.x, width), y: wrap(p.y, height) });
+  const cross = (a,b,c) => (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+  function pointDistance(p,a,b) {
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy || 1)));
+    return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);
+  }
+  function segmentDistance(a,b,c,d) {
+    if(cross(a,b,c)*cross(a,b,d)<0 && cross(c,d,a)*cross(c,d,b)<0) return 0;
+    return Math.min(pointDistance(a,c,d),pointDistance(b,c,d),pointDistance(c,a,b),pointDistance(d,a,b));
+  }
+  function collides(a,b,c,d,gap) {
+    // Enumerate only periodic images whose expanded bounding boxes can overlap.
+    const x0=Math.ceil((Math.min(a.x,b.x)-gap-Math.max(c.x,d.x))/width);
+    const x1=Math.floor((Math.max(a.x,b.x)+gap-Math.min(c.x,d.x))/width);
+    const y0=Math.ceil((Math.min(a.y,b.y)-gap-Math.max(c.y,d.y))/height);
+    const y1=Math.floor((Math.max(a.y,b.y)+gap-Math.min(c.y,d.y))/height);
+    for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++) {
+      const shift=p=>({x:p.x+x*width,y:p.y+y*height});
+      if(segmentDistance(a,b,shift(c),shift(d))<gap) return true;
+    }
+    return false;
+  }
+  function split(arc, from, to, pointAt) {
+    if(to<=from) return [];
+    // Separate at direction extrema first, making each coordinate monotonic.
+    const stops=[from,to];
+    if(Math.abs(arc.turn)>1e-10) {
+      const angleAt=s=>arc.heading+arc.turn*(s-arc.from)/(arc.to-arc.from);
+      const lo=Math.min(angleAt(from),angleAt(to)), hi=Math.max(angleAt(from),angleAt(to));
+      for(let k=Math.ceil(lo/(Math.PI/2));k<=Math.floor(hi/(Math.PI/2));k++) {
+        const s=arc.from+(k*Math.PI/2-arc.heading)/arc.turn*(arc.to-arc.from);
+        if(s>from+1e-9 && s<to-1e-9) stops.push(s);
+      }
+    }
+    stops.sort((a,b)=>a-b);
+    const cuts=[from,to];
+    for(let i=1;i<stops.length;i++) {
+      const lo=stops[i-1],hi=stops[i];
+      for(const [axis,size] of [['x',width],['y',height]]) {
+        const a=pointAt(arc,lo)[axis],b=pointAt(arc,hi)[axis];
+        if(Math.abs(a-b)<1e-10) continue;
+        for(let k=Math.ceil(Math.min(a,b)/size);k<=Math.floor(Math.max(a,b)/size);k++) {
+          const edge=k*size;
+          let left=lo,right=hi;
+          for(let j=0;j<45;j++) {
+            const mid=(left+right)/2;
+            if((pointAt(arc,mid)[axis]<edge)===(a<b)) left=mid; else right=mid;
+          }
+          const s=(left+right)/2;
+          if(s>from+1e-8 && s<to-1e-8) cuts.push(s);
+        }
+      }
+    }
+    cuts.sort((a,b)=>a-b);
+    const unique=cuts.filter((s,i)=>i===0 || s-cuts[i-1]>1e-7);
+    const pieces=[];
+    for(let i=1;i<unique.length;i++) {
+      const a=unique[i-1],b=unique[i],mid=pointAt(arc,(a+b)/2);
+      const dx=-Math.floor(mid.x/width)*width,dy=-Math.floor(mid.y/height)*height;
+      const shift=p=>({x:p.x+dx,y:p.y+dy});
+      pieces.push({from:a,to:b,start:shift(pointAt(arc,a)),end:shift(pointAt(arc,b)),dx,dy});
+    }
+    return pieces;
+  }
+  function fragments(arc, piece, pointAt) {
+    const points=[piece.start,piece.end];
+    // Arc excursion from its chord is bounded by radius * (1-cos(angle/2)).
+    const angle=Math.abs(arc.turn)*(piece.to-piece.from)/(arc.to-arc.from);
+    const sagitta=Math.abs(arc.turn)<1e-10?0:(arc.to-arc.from)/Math.abs(arc.turn)*(1-Math.cos(angle/2));
+    const pad=padding+sagitta;
+    const xs=[0],ys=[0];
+    if(Math.min(...points.map(p=>p.x))<pad) xs.push(width);
+    if(Math.max(...points.map(p=>p.x))>width-pad) xs.push(-width);
+    if(Math.min(...points.map(p=>p.y))<pad) ys.push(height);
+    if(Math.max(...points.map(p=>p.y))>height-pad) ys.push(-height);
+    return xs.flatMap(x=>ys.filter(y=>x!==0 || y!==0).map(y=>({
+      ...piece,start:{x:piece.start.x+x,y:piece.start.y+y},end:{x:piece.end.x+x,y:piece.end.y+y},
+    })));
+  }
+  return { canonical, collides, split, fragments };
+};
+const createTrail = function createTrail(config) {
   const { width, height, margin, stepLength: step, minGap, strokeWidth } = config;
   if (![width, height, margin, step, minGap, strokeWidth].every(Number.isFinite) ||
       step <= 0 || minGap < 0 || strokeWidth <= 0 || margin < strokeWidth / 2 ||
@@ -36,6 +123,8 @@
       !config.radii.every(r => Number.isFinite(r) && r > 0)) {
     throw new Error("Invalid walker configuration");
   }
+  const padding = strokeWidth / 2 + 4 * config.blur + 4;
+  const portals = config.wrapEdges ? createPortals(width, height, padding) : null;
   let state = config.seed >>> 0;
   function random() {
     state += 0x6D2B79F5;
@@ -50,6 +139,9 @@
   // Bound the exempt local neighborhood to less than a quarter turn.
   if (maxTurn * (neighbors + 1) >= Math.PI / 2) {
     throw new Error("Radii too small for the stroke width, gap, and step length");
+  }
+  if (portals && Math.min(width, height) <= 2 * ((neighbors + 1) * step + clearance)) {
+    throw new Error("Portal viewport too small for the local stroke neighborhood");
   }
   const subdivisions = 4;
   const error = step * maxTurn / (8 * subdivisions ** 2);
@@ -76,7 +168,7 @@
     return { points, turn, end: points.at(-1) };
   }
   function valid(candidate, mesh, arcIndex) {
-    for (const p of candidate.points) {
+    if (!portals) for (const p of candidate.points) {
       if (p.x < margin + error || p.x > width - margin - error ||
           p.y < margin + error || p.y > height - margin - error) return false;
     }
@@ -85,6 +177,10 @@
       for (const segment of mesh) {
         if (arcIndex - segment.arc < neighbors) continue;
         const gap = clearance + 2 * error;
+        if (portals) {
+          if (portals.collides(a, b, segment.a, segment.b, gap)) return false;
+          continue;
+        }
         if (Math.max(a.x, b.x) + gap < Math.min(segment.a.x, segment.b.x) ||
             Math.min(a.x, b.x) - gap > Math.max(segment.a.x, segment.b.x) ||
             Math.max(a.y, b.y) + gap < Math.min(segment.a.y, segment.b.y) ||
@@ -138,7 +234,7 @@
   function commit(chosen) {
     arcs.push({ ...chosen, start: p, heading, from: endDistance, to: endDistance + step, id: index });
     for (let j=1; j<chosen.points.length; j++) mesh.push({ a:chosen.points[j-1], b:chosen.points[j], arc:index });
-    p = chosen.end; heading += chosen.turn; turn = chosen.turn;
+    p = portals ? portals.canonical(chosen.end) : chosen.end; heading += chosen.turn; turn = chosen.turn;
     endDistance += step; index++;
   }
 
@@ -189,19 +285,27 @@
       y: arc.start.y + length * Math.sin(arc.heading + half) };
   }
   function slice(from, to) {
-    let d = "";
+    let d = "", ghosts = "", last;
+    function command(arc, piece, fresh) {
+      let result = fresh ? ` M ${piece.start.x} ${piece.start.y}` : "";
+      if (Math.abs(arc.turn) < 1e-10) return result + ` L ${piece.end.x} ${piece.end.y}`;
+      const radius = step / Math.abs(arc.turn);
+      return result + ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${piece.end.x} ${piece.end.y}`;
+    }
     for (const arc of arcs) {
       const a = Math.max(from, arc.from), b = Math.min(to, arc.to);
       if (b <= a) continue;
-      const start = pointAt(arc, a), end = pointAt(arc, b);
-      if (!d) d = `M ${start.x} ${start.y}`;
-      if (Math.abs(arc.turn) < 1e-10) d += ` L ${end.x} ${end.y}`;
-      else {
-        const radius = step / Math.abs(arc.turn);
-        d += ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${end.x} ${end.y}`;
+      const pieces = portals ? portals.split(arc, a, b, pointAt) :
+        [{ from:a, to:b, start:pointAt(arc,a), end:pointAt(arc,b) }];
+      for (const piece of pieces) {
+        const fresh = !last || Math.hypot(last.x-piece.start.x,last.y-piece.start.y)>1e-6;
+        d += command(arc,piece,fresh); last=piece.end;
+        if (portals) for (const fragment of portals.fragments(arc,piece,pointAt)) {
+          ghosts += command(arc,fragment,true);
+        }
       }
     }
-    return d;
+    return (d + ghosts).trim();
   }
   return {
     advance(distance) {
@@ -386,9 +490,18 @@ const generateWalk = function generateWalk(config) {
     [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
     headBody.setAttribute("d", "");
     if (preference.matches) {
-      const walk = generateWalk({ ...config, seed });
-      path.setAttribute("d", walk.d); body.setAttribute("d", walk.d);
-      headBody.setAttribute("d", walk.d);
+      let d;
+      if (config.wrapEdges) {
+        const still = createTrail({ ...config, seed });
+        let state;
+        for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {
+          state = still.advance(distance);
+          if (state.blocked) break;
+        }
+        d = state?.d ?? "";
+      } else d = generateWalk({ ...config, seed }).d;
+      path.setAttribute("d", d); body.setAttribute("d", d);
+      headBody.setAttribute("d", d);
       return;
     }
     walker = createTrail({ ...config, seed });
@@ -455,5 +568,5 @@ const generateWalk = function generateWalk(config) {
     preference.removeEventListener("change", onPreferenceChange);
   });
   reset();
-})({"width":1200,"height":706,"margin":54,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
+})({"width":1200,"height":706,"margin":54,"wrapEdges":true,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
 </svg>

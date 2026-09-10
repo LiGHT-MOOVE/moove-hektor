@@ -2,7 +2,8 @@
 export const CONFIG = {
   width: 1200,
   height: 706,
-  margin: 54,
+  margin: 54, // Used only when wrapEdges is false.
+  wrapEdges: true, // Opposite viewport edges connect as portals.
   strokeWidth: 38,
   blur: 13,
   opacity: 0.55,

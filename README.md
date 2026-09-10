@@ -74,6 +74,27 @@ Reduced-motion mode shows one static path with no recurring animation. Backgroun
 frame gaps are capped to avoid large jumps on return. Frame callbacks and media
 listeners are cleaned up on document disposal.
 
+## Edge portals
+
+`wrapEdges: true` connects left/right and top/bottom edges. The walker preserves
+its direction, curvature, and travelled distance through each crossing. Coordinates
+are normalized after every step, keeping geometry numerically bounded.
+
+Curves are split at their exact viewport intersections into disconnected `M`
+subpaths inside the same SVG path. Corner crossings split both coordinates at
+once. All subpaths share one collision history, with periodic proximity checks
+across opposite edges and corners. Fading pieces remain obstacles until fully
+removed. Edges themselves never cause a retry in portal mode.
+
+Small translated fragments near each edge carry the stroke and blur across the
+seam. These are render-only pieces, not copies of the full route or extra collision
+objects. The same fragments are applied to both opacity masks. Masks and filters
+have padded bounds; the final composition is clipped to the viewport after blur.
+The background gradient remains fixed.
+
+Set `wrapEdges: false` to restore solid boundaries and the configured `margin`.
+Reduced-motion mode also uses wrapped geometry when portals are enabled.
+
 ## Settings
 
 Edit `config.js` and rebuild:
@@ -89,6 +110,8 @@ Edit `config.js` and rebuild:
 | `straightChance` | Chance of a short straight passage at a steering decision |
 | `turnEase` | Maximum change of turn per step during transitions |
 | `radii` | Two preferred circular turning sizes |
+| `wrapEdges` | Connect opposite edges; false restores solid boundaries |
+| `margin` | Boundary inset when wrapping is disabled |
 | `minGap` | Gap between solid strokes |
 | `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
 | `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
@@ -104,6 +127,7 @@ attempt appears on the SVG root as `data-seed`.
 - `build.mjs`: embeds all runtime functions and configuration into `hektor.svg`.
 - `trail.js`: bounded-memory distance-based walker, geometry slicing, planning.
 - `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.
-- `walker.js`: static full-route generator used for reduced motion.
+- `portals.js`: exact curve splitting, local blur fragments, and periodic collision checks.
+- `walker.js`: static full-route generator for reduced motion with solid boundaries.
 - `config.js`: appearance, geometry, length and timing settings.
 - `*.test.js`: geometry, bounded history, tail threshold, retry, and lifecycle checks.

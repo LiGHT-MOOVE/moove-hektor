@@ -10,7 +10,7 @@ function harness(reduced=false, overrides={}) {
   const elements=Object.fromEntries(['trail','drawing','tail-ramp','tail-body','head-ramp','head-body'].map(id=>[id,node()]));
   const preference={matches:reduced,addEventListener:(_,fn)=>{change=fn;},removeEventListener(){}};
   vm.runInNewContext(`(${initialize.toString()})(config)`, {
-    config:{...CONFIG,seed:42,trailLength:20,tailFadeLength:10,speed:100,fadeDuration:100,...overrides},
+    config:{...CONFIG,wrapEdges:false,seed:42,trailLength:20,tailFadeLength:10,speed:100,fadeDuration:100,...overrides},
     document:{getElementById:id=>elements[id],createElementNS:node,documentElement:{dataset:{}}},
     matchMedia:()=>preference,
     generateWalk:()=>({d:'static'}),
@@ -79,4 +79,12 @@ test('head opacity decreases toward the tip and can be tuned or disabled',()=>{
   disabled.tick(0);disabled.tick(50);
   assert.equal(disabled.elements['head-body'].attrs.d,'0:5');
   assert.ok(disabled.elements['head-ramp'].children.every(n=>n.attrs.d===''));
+});
+
+
+test('reduced-motion portal mode uses wrapped geometry without scheduling frames',()=>{
+  const h=harness(true,{wrapEdges:true});
+  assert.equal(h.frames.size,0);
+  assert.equal(h.elements.trail.attrs.d,'visible');
+  assert.deepEqual(h.seeds,[42]);
 });

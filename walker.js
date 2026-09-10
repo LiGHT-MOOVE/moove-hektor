@@ -1,0 +1,98 @@
+/**
+ * Browser-safe generator. Returns tangent-connected circular arcs and a sampled
+ * collision mesh. Generation is bounded; the longest attempt wins if trapped.
+ * Kept self-contained so the builder can embed it without a bundler.
+ */
+export function generateWalk(config) {
+  const { width, height, margin, stepLength: step, minGap, strokeWidth } = config;
+  if (![width, height, margin, step, minGap, strokeWidth].every(Number.isFinite) ||
+      step <= 0 || minGap < 0 || strokeWidth <= 0 || margin < strokeWidth / 2 ||
+      width <= margin * 2 || height <= margin * 2 ||
+      ![config.maxSteps, config.candidatesPerStep, config.attempts].every(n => Number.isInteger(n) && n > 0) ||
+      !Number.isFinite(config.maxTurn) || config.maxTurn <= 0 ||
+      !Number.isFinite(config.turnChange) || config.turnChange <= 0) {
+    throw new Error("Invalid walker configuration");
+  }
+  let state = config.seed >>> 0;
+  function random() {
+    state += 0x6D2B79F5;
+    let t = Math.imul(state ^ state >>> 15, 1 | state);
+    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const clearance = minGap + strokeWidth;
+  const neighbors = Math.ceil(clearance / step) + 2;
+  // A short adjoining neighborhood cannot turn back on itself.
+  const maxTurn = Math.min(config.maxTurn, 0.22, 0.8 / (neighbors + 1));
+  const subdivisions = 4;
+  const error = step * maxTurn / (8 * subdivisions ** 2);
+  const distanceToSegment = (p, a, b) => {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+    return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+  };
+  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  function distance(a, b, c, d) {
+    if (cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0) return 0;
+    return Math.min(distanceToSegment(a, c, d), distanceToSegment(b, c, d),
+      distanceToSegment(c, a, b), distanceToSegment(d, a, b));
+  }
+  function propose(p, heading, turn) {
+    const points = [p];
+    for (let i = 1; i <= subdivisions; i++) {
+      const f = i / subdivisions;
+      // Stable circular-arc evaluation, including nearly straight steps.
+      const half = turn * f / 2;
+      const length = step * f * (Math.abs(half) < 1e-10 ? 1 : Math.sin(half) / half);
+      points.push({ x: p.x + length * Math.cos(heading + half), y: p.y + length * Math.sin(heading + half) });
+    }
+    return { points, turn, end: points.at(-1) };
+  }
+  function valid(candidate, mesh, arcIndex) {
+    for (const p of candidate.points) {
+      if (p.x < margin + error || p.x > width - margin - error ||
+          p.y < margin + error || p.y > height - margin - error) return false;
+    }
+    for (let i = 1; i < candidate.points.length; i++) {
+      const a = candidate.points[i - 1], b = candidate.points[i];
+      for (const segment of mesh) {
+        if (arcIndex - segment.arc < neighbors) continue;
+        if (distance(a, b, segment.a, segment.b) < clearance + 2 * error) return false;
+      }
+    }
+    return true;
+  }
+  let best = { arcs: [], mesh: [], d: "", length: 0 };
+  for (let attempt = 0; attempt < config.attempts; attempt++) {
+    let p = { x: width * (0.35 + random() * 0.3), y: height * (0.35 + random() * 0.3) };
+    p = { x: clamp(p.x, margin + error, width - margin - error), y: clamp(p.y, margin + error, height - margin - error) };
+    let heading = random() * Math.PI * 2;
+    let turn = (random() * 2 - 1) * maxTurn;
+    const arcs = [], mesh = [];
+    let d = `M ${p.x} ${p.y}`;
+    for (let index = 0; index < config.maxSteps; index++) {
+      let accepted;
+      for (let trial = 0; trial < config.candidatesPerStep; trial++) {
+        const candidateTurn = clamp(turn + (random() * 2 - 1) * config.turnChange, -maxTurn, maxTurn);
+        const candidate = propose(p, heading, candidateTurn);
+        if (valid(candidate, mesh, index)) { accepted = candidate; break; }
+      }
+      if (!accepted) break;
+      const end = accepted.end;
+      turn = accepted.turn;
+      if (Math.abs(turn) < 1e-8) d += ` L ${end.x} ${end.y}`;
+      else {
+        const radius = step / Math.abs(turn);
+        d += ` A ${radius} ${radius} 0 0 ${turn > 0 ? 1 : 0} ${end.x} ${end.y}`;
+      }
+      for (let j = 1; j < accepted.points.length; j++) mesh.push({ a: accepted.points[j - 1], b: accepted.points[j], arc: index });
+      arcs.push(accepted);
+      p = end;
+      heading += turn;
+    }
+    if (arcs.length > best.arcs.length) best = { arcs, mesh, d, length: arcs.length * step };
+    if (arcs.length === config.maxSteps) break;
+  }
+  return best;
+}

@@ -3,6 +3,8 @@
 Build a standalone SVG with embedded JavaScript, a teal gradient, and a soft,
 continuously drawn trail. No external packages or runtime assets are required.
 
+This project is inspired by **Hektor**, the project by **Jürg Lehni**.
+
 ## Build and preview
 
 Requires Node.js 18 or newer.

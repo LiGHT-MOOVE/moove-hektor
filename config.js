@@ -7,16 +7,16 @@ export const CONFIG = {
   strokeWidth: 38,
   blur: 13,
   opacity: 0.55,
-  color: "#168c88",
+  color: "#2466ce",
   shadowEnabled: true, // Set false to remove the depth effect.
-  shadowColor: "#3c8b87",
+  shadowColor: "#437bbc",
   shadowOpacity: 0.4, // Also follows the trail's overall opacity and fading.
   shadowOffsetX: -32,
   shadowOffsetY: 32,
-  backgroundTop: "#eff9f9",
-  backgroundMiddle: "#c5eeeb",
-  backgroundBottom: "#43c6bc",
-  speed: 110,
+  backgroundTop: "#f5fcff",
+  backgroundMiddle: "#e3f2ff",
+  backgroundBottom: "#8ac4ff",
+  speed: 200,
   trailLength: 2393, // Approximate perimeter of ICON_MOOVE_B.svg in native units.
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
   headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.

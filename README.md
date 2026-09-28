@@ -1,6 +1,6 @@
 # Moove Hektor
 
-Build a standalone SVG with embedded JavaScript, a teal gradient, and a soft,
+Build a standalone SVG with embedded JavaScript, a blue gradient, and a soft,
 continuously drawn trail. No external packages or runtime assets are required.
 
 This project is inspired by **Hektor**, the project by **Jürg Lehni**.
@@ -131,7 +131,7 @@ Edit `config.js` and rebuild:
 | `minGap` | Gap between solid strokes |
 | `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
 | `shadowEnabled` | Enable the subtle drop shadow; false removes it |
-| `shadowColor`, `shadowOpacity` | Shadow tint and strength (default muted teal, 0.4) |
+| `shadowColor`, `shadowOpacity` | Shadow tint and strength (default muted blue, 0.4) |
 | `shadowOffsetX`, `shadowOffsetY` | Shadow displacement in viewBox units (default -32, 32) |
 | `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
 | `seed` | Null for random retries; an integer for a reproducible seed sequence |

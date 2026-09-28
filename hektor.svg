@@ -5,14 +5,14 @@
   <defs>
     <clipPath id="viewport"><rect width="1200" height="706"/></clipPath>
     <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#eff9f9"/>
-      <stop offset="48%" stop-color="#c5eeeb"/>
-      <stop offset="100%" stop-color="#43c6bc"/>
+      <stop offset="0%" stop-color="#f5fcff"/>
+      <stop offset="48%" stop-color="#e3f2ff"/>
+      <stop offset="100%" stop-color="#8ac4ff"/>
     </linearGradient>
     <filter id="soften" filterUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="13" result="blurred"/>
       <feOffset in="blurred" dx="-32" dy="32" result="offset"/>
-      <feFlood flood-color="#3c8b87" flood-opacity="0.4" result="shadow-color"/>
+      <feFlood flood-color="#437bbc" flood-opacity="0.4" result="shadow-color"/>
       <feComposite in="shadow-color" in2="offset" operator="in" result="shadow"/>
       <feMerge><feMergeNode in="shadow"/><feMergeNode in="blurred"/></feMerge>
     </filter>
@@ -29,7 +29,7 @@
   <g clip-path="url(#viewport)">
   <g id="drawing" opacity="0.55" filter="url(#soften)">
   <g mask="url(#head-mask)">
-  <path id="trail" fill="none" stroke="#168c88" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
+  <path id="trail" fill="none" stroke="#2466ce" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
   </g>
   </g>
   </g>
@@ -448,5 +448,5 @@ const createTrail = function createTrail(config) {
     preference.removeEventListener("change", onPreferenceChange);
   });
   reset();
-})({"width":1200,"height":706,"margin":54,"wrapEdges":true,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#168c88","shadowEnabled":true,"shadowColor":"#3c8b87","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"backgroundTop":"#eff9f9","backgroundMiddle":"#c5eeeb","backgroundBottom":"#43c6bc","speed":110,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"motifEnabled":true,"motifRandomStart":true,"motifMirror":true,"motif":[{"radius":96,"sweep":3.141592653589793},{"radius":142,"sweep":-3.141592653589793}],"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
+})({"width":1200,"height":706,"margin":54,"wrapEdges":true,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#2466ce","shadowEnabled":true,"shadowColor":"#437bbc","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"backgroundTop":"#f5fcff","backgroundMiddle":"#e3f2ff","backgroundBottom":"#8ac4ff","speed":200,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"straightChance":0.22,"turnEase":0.035,"fadeDuration":1400,"motifEnabled":true,"motifRandomStart":true,"motifMirror":true,"motif":[{"radius":96,"sweep":3.141592653589793},{"radius":142,"sweep":-3.141592653589793}],"seed":null,"stepLength":18,"minGap":18,"radii":[96,142],"searchBudget":2400,"attempts":6});]]></script>
 </svg>

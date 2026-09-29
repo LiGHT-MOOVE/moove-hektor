@@ -1,41 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 706" role="img" aria-labelledby="title desc">
-  <title id="title">Moove — a wandering line</title>
-  <desc id="desc">A randomly generated smooth line draws itself without crossing its earlier route.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="display:block" role="img" aria-labelledby="title desc">
+  <title id="title">Moove — flowing motifs</title>
+  <desc id="desc">A seamless tiled field of upright and inverted motifs with softly tapered moving trails.</desc>
   <defs>
-    <clipPath id="viewport"><rect width="1200" height="706"/></clipPath>
     <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#f5fcff"/>
       <stop offset="48%" stop-color="#e3f2ff"/>
       <stop offset="100%" stop-color="#8ac4ff"/>
     </linearGradient>
-    <filter id="soften" filterUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" color-interpolation-filters="sRGB">
+    <filter id="soften" filterUnits="userSpaceOnUse" x="-107" y="-107" width="2880" height="922" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="13" result="blurred"/>
       <feOffset in="blurred" dx="-32" dy="32" result="offset"/>
       <feFlood flood-color="#437bbc" flood-opacity="0.4" result="shadow-color"/>
       <feComposite in="shadow-color" in2="offset" operator="in" result="shadow"/>
       <feMerge><feMergeNode in="shadow"/><feMergeNode in="blurred"/></feMerge>
     </filter>
-    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" style="mask-type:luminance">
+    <mask id="tail-mask" maskUnits="userSpaceOnUse" x="-107" y="-107" width="2880" height="922" style="mask-type:luminance">
       <g id="tail-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <path id="tail-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
-    <mask id="head-mask" maskUnits="userSpaceOnUse" x="-107" y="-107" width="1414" height="920" style="mask-type:luminance">
+    <mask id="head-mask" maskUnits="userSpaceOnUse" x="-107" y="-107" width="2880" height="922" style="mask-type:luminance">
       <path id="head-body" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
       <g id="head-ramp" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#background)"/>
-  <g clip-path="url(#viewport)">
+    <pattern id="motifs" patternUnits="userSpaceOnUse" width="2666" height="708" overflow="hidden">
   <g id="drawing" opacity="0.55" filter="url(#soften)">
   <g mask="url(#head-mask)">
   <path id="trail" fill="none" stroke="#2466ce" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" mask="url(#tail-mask)"/>
   </g>
   </g>
-  </g>
-  <script><![CDATA[const renderPadding = function renderPadding(config) {
-  const shadow = config.shadowEnabled ?
-    Math.max(Math.abs(config.shadowOffsetX), Math.abs(config.shadowOffsetY)) : 0;
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#background)"/>
+  <rect id="field" width="100%" height="100%" fill="url(#motifs)"/>
+<script><![CDATA[const renderPadding = function renderPadding(config) {
+  const shadow = config.shadowEnabled ? Math.max(Math.abs(config.shadowOffsetX), Math.abs(config.shadowOffsetY)) : 0;
   return config.strokeWidth / 2 + 4 * config.blur + shadow + 4;
 };
 const createGeometry = function createGeometry() {
@@ -51,81 +50,74 @@ const createGeometry = function createGeometry() {
     return arcPoint(arc.start, arc.heading, arc.turn, length,
       clamp((distance - arc.from) / length, 0, 1));
   }
-  function pointDistance(p, a, b) {
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
-    return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
-  }
-  const cross = (a, b, c) => (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
-  function segmentDistance(a, b, c, d) {
-    if (cross(a,b,c)*cross(a,b,d)<0 && cross(c,d,a)*cross(c,d,b)<0) return 0;
-    return Math.min(pointDistance(a,c,d), pointDistance(b,c,d), pointDistance(c,a,b), pointDistance(d,a,b));
-  }
-  return { arcPoint, pointAt, segmentDistance };
+  return { arcPoint, pointAt };
 };
-const createPathRenderer = function createPathRenderer(config) {
+const createPathRenderer = function createPathRenderer(config, motif, tile) {
   const { pointAt } = createGeometry();
-  const portals = config.wrapEdges ? createPortals(config.width, config.height) : null;
+  const repeats = createRepeats(tile.width, tile.height);
   const padding = renderPadding(config);
-  const origin = { x:0, y:0 }, corner = { x:config.width, y:config.height };
-  return function slice(arcs, from, to) {
+  const origin = { x: 0, y: 0 }, corner = { x: tile.width, y: tile.height };
+  return function slice(instance, from, to) {
     if (to <= from) return '';
+    const span = Math.min(to - from, motif.length);
+    from = ((from % motif.length) + motif.length) % motif.length;
+    to = from + span;
     let d = '', last;
-    for (const arc of arcs) {
-      if (arc.from >= to) break;
-      if (arc.to <= from) continue;
-      const a = Math.max(from, arc.from), b = Math.min(to, arc.to);
-      const start = pointAt(arc,a), end = pointAt(arc,b);
-      const straight = Math.abs(arc.turn) < 1e-10;
-      const radius = straight ? 0 : (arc.to-arc.from)/Math.abs(arc.turn);
-      const angle = Math.abs(arc.turn)*(b-a)/(arc.to-arc.from);
-      // Short arcs lie within this distance of their chord, including edge grazes.
-      const sagitta = radius * (1-Math.cos(angle/2));
-      const offsets = portals ? portals.offsets(origin,corner,start,end,padding+sagitta) : [origin];
-      for (const offset of offsets) {
-        const p = { x:start.x+offset.x, y:start.y+offset.y };
-        const q = { x:end.x+offset.x, y:end.y+offset.y };
-        if (!last || Math.hypot(last.x-p.x,last.y-p.y)>1e-6) d += ` M ${p.x} ${p.y}`;
-        d += straight ? ` L ${q.x} ${q.y}` : ` A ${radius} ${radius} 0 0 ${arc.turn>0?1:0} ${q.x} ${q.y}`;
-        last = q;
+    for (let lap = 0; lap <= (to > motif.length ? 1 : 0); lap++) {
+      for (const arc of motif.arcs) {
+        const a = Math.max(from - lap * motif.length, arc.from);
+        const b = Math.min(to - lap * motif.length, arc.to);
+        if (b <= a) continue;
+        const transform = p => ({ x: instance.x + p.x * instance.sign, y: instance.y + p.y * instance.sign });
+        const start = transform(pointAt(arc, a)), end = transform(pointAt(arc, b));
+        const radius = (arc.to - arc.from) / Math.abs(arc.turn);
+        const angle = Math.abs(arc.turn) * (b - a) / (arc.to - arc.from);
+        const sagitta = radius * (1 - Math.cos(angle / 2));
+        for (const offset of repeats.offsets(origin, corner, start, end, padding + sagitta)) {
+          const p = { x: start.x + offset.x, y: start.y + offset.y };
+          const q = { x: end.x + offset.x, y: end.y + offset.y };
+          if (!last || Math.hypot(last.x - p.x, last.y - p.y) > 1e-6) d += ` M ${p.x} ${p.y}`;
+          d += ` A ${radius} ${radius} 0 0 ${arc.turn > 0 ? 1 : 0} ${q.x} ${q.y}`;
+          last = q;
+        }
       }
     }
     return d.trim();
   };
 };
-const createMotif = function createMotif(config, random) {
-  if (!Array.isArray(config.motif) || !config.motif.length || config.motif.some((item, index, items) =>
-    !Number.isFinite(item.radius) || item.radius <= 0 || !Number.isFinite(item.sweep) ||
-    Math.abs(Math.abs(item.sweep) - Math.PI) > 1e-10 ||
-    item.radius * Math.PI < config.stepLength ||
-    Math.sign(item.sweep) === Math.sign(items[(index + 1) % items.length].sweep))) {
-    throw new Error('Horizontal motif requires alternating positive and negative half-turns');
-  }
-  let index = config.motifRandomStart ? Math.floor(random() * config.motif.length) : 0;
-  const mirror = config.motifMirror && random() < 0.5 ? -1 : 1;
-  let remaining = Math.PI;
-  return {
-    peek(maxLength = config.stepLength) {
-      const item = config.motif[index];
-      const length = Math.min(maxLength, remaining * item.radius);
-      return { index, radius: item.radius, length,
-        turn: Math.sign(item.sweep) * mirror * length / item.radius,
-        remainingLength: remaining * item.radius,
-        sectionStart: remaining === Math.PI };
-    },
-    consume(length) {
-      remaining -= length / config.motif[index].radius;
-      if (remaining <= 1e-9) {
-        index = (index + 1) % config.motif.length;
-        remaining = Math.PI;
+const createMotif = function createMotif(config) {
+  const { arcPoint } = createGeometry();
+  if (!Array.isArray(config.turns) || !config.turns.length) throw new Error('Empty motif');
+  let p = { x: 0, y: 0 }, heading = 0, length = 0;
+  const arcs = [], points = [p];
+  for (const { radius, degrees } of config.turns) {
+    const sweep = degrees * Math.PI / 180;
+    if (!Number.isFinite(radius) || radius <= 0 || !Number.isFinite(sweep) || !sweep) {
+      throw new Error('Invalid circular turn');
+    }
+    const count = Math.ceil(Math.abs(sweep) / (Math.PI / 2));
+    const turn = sweep / count, step = radius * Math.abs(turn);
+    for (let i = 0; i < count; i++) {
+      arcs.push({ start: p, heading, turn, from: length, to: length + step });
+      // Include extrema where either tangent component vanishes.
+      const low = Math.min(heading, heading + turn), high = Math.max(heading, heading + turn);
+      for (let k = Math.ceil(low / (Math.PI / 2)); k * Math.PI / 2 <= high; k++) {
+        points.push(arcPoint(p, heading, turn, step, (k * Math.PI / 2 - heading) / turn));
       }
-    },
-  };
+      p = arcPoint(p, heading, turn, step, 1);
+      points.push(p); heading += turn; length += step;
+    }
+  }
+  if (Math.hypot(p.x, p.y) > 1e-6 || Math.abs(Math.sin(heading / 2)) > 1e-8) {
+    throw new Error('Motif must close in position and tangent');
+  }
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const width = Math.max(...xs) - Math.min(...xs), height = Math.max(...ys) - Math.min(...ys);
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+  for (const arc of arcs) arc.start = { x: arc.start.x - cx, y: arc.start.y - cy };
+  return { arcs, length, width, height };
 };
-const createPortals = function createPortals(width, height) {
-  const { segmentDistance } = createGeometry();
-  const wrap = (value, size) => ((value % size) + size) % size;
-  const canonical = p => ({ x: wrap(p.x, width), y: wrap(p.y, height) });
+const createRepeats = function createRepeats(width, height) {
   // Translate the c/d box to overlap the a/b box expanded by gap.
   function* offsets(a, b, c, d, gap) {
     const x0=Math.ceil((Math.min(a.x,b.x)-gap-Math.max(c.x,d.x))/width);
@@ -134,237 +126,167 @@ const createPortals = function createPortals(width, height) {
     const y1=Math.floor((Math.max(a.y,b.y)+gap-Math.min(c.y,d.y))/height);
     for (let x=x0; x<=x1; x++) for (let y=y0; y<=y1; y++) yield { x:x*width, y:y*height };
   }
-  function collides(a, b, c, d, gap) {
-    for (const offset of offsets(a,b,c,d,gap)) {
-      const shift = p => ({ x:p.x+offset.x, y:p.y+offset.y });
-      if (segmentDistance(a,b,shift(c),shift(d)) < gap) return true;
-    }
-    return false;
-  }
-  return { canonical, offsets, collides };
+  return { offsets };
 };
-const createTrail = function createTrail(config) {
-  const { width, height, margin, stepLength: step, minGap, strokeWidth } = config;
-  if (![width, height, margin, step, minGap, strokeWidth].every(Number.isFinite) ||
-      step <= 0 || minGap < 0 || strokeWidth <= 0 || margin < strokeWidth / 2 ||
-      width <= margin * 2 || height <= margin * 2 ||
-      !["left", "right", "random"].includes(config.travelDirection)) {
-    throw new Error("Invalid walker configuration");
+const createTile = function createTile(pattern, motif, seed) {
+  const { tileWidth, tileHeight, spacing, motifs } = pattern;
+  if (!spacing || ![spacing.x, spacing.y].every(n => Number.isFinite(n) && n > 0)) throw new Error('Spacing factors must be positive');
+  if (![tileWidth, tileHeight].every(n => Number.isFinite(n) && n > 0)) throw new Error('Invalid tile dimensions');
+  const width = tileWidth * spacing.x, height = tileHeight * spacing.y;
+  if (![width, height].every(n => Number.isFinite(n) && n > 0)) throw new Error('Invalid tile dimensions');
+  if (!Array.isArray(motifs) || !motifs.length) throw new Error('Tile must contain at least one motif');
+  for (const placement of motifs) {
+    if (!placement || ![placement.x, placement.y].every(Number.isFinite) ||
+        ![0, 180].includes(placement.rotation) ||
+        !Number.isFinite(placement.delay) || placement.delay < 0) throw new Error('Each motif needs finite x/y and rotation 0 or 180, and a non-negative delay');
   }
-  const { arcPoint, segmentDistance } = createGeometry();
-  const portals = config.wrapEdges ? createPortals(width, height) : null;
-  let state = config.seed >>> 0;
-  function random() {
-    state += 0x6D2B79F5;
-    let t = Math.imul(state ^ state >>> 15, 1 | state);
-    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  function random(key) {
+    let x = (seed ^ Math.imul(key + 1, 0x9e3779b9)) >>> 0;
+    x = Math.imul(x ^ x >>> 16, 0x21f0aaad);
+    x = Math.imul(x ^ x >>> 15, 0x735a2d97);
+    return ((x ^ x >>> 15) >>> 0) / 4294967296;
   }
-  const clearance = minGap + strokeWidth;
-  const neighbors = Math.ceil(clearance / step) + 2;
-  const motif = createMotif(config, random);
-  const maxTurn = step / Math.min(...config.motif.map(item => item.radius));
-  // Bound the exempt local neighborhood to less than a quarter turn.
-  if (maxTurn * (neighbors + 1) >= Math.PI / 2) {
-    throw new Error("Radii too small for the stroke width, gap, and step length");
-  }
-  if (portals && Math.min(width, height) <= 2 * ((neighbors + 1) * step + clearance)) {
-    throw new Error("Portal viewport too small for the local stroke neighborhood");
-  }
-  const subdivisions = 4;
-  const error = step * maxTurn / (8 * subdivisions ** 2);
-  function propose(p, heading, turn, arcLength = step) {
-    const points = [p];
-    for (let i = 1; i <= subdivisions; i++) {
-      points.push(arcPoint(p, heading, turn, arcLength, i / subdivisions));
-    }
-    return { points, turn, length: arcLength, end: points.at(-1) };
-  }
-  function valid(candidate, mesh, arcIndex) {
-    if (!portals) for (const p of candidate.points) {
-      if (p.x < margin + error || p.x > width - margin - error ||
-          p.y < margin + error || p.y > height - margin - error) return false;
-    }
-    for (let i = 1; i < candidate.points.length; i++) {
-      const a = candidate.points[i - 1], b = candidate.points[i];
-      for (const segment of mesh) {
-        if (arcIndex - segment.arc < neighbors) continue;
-        const gap = clearance + 2 * error;
-        if (portals) {
-          if (portals.collides(a, b, segment.a, segment.b, gap)) return false;
-          continue;
-        }
-        if (Math.max(a.x, b.x) + gap < Math.min(segment.a.x, segment.b.x) ||
-            Math.min(a.x, b.x) - gap > Math.max(segment.a.x, segment.b.x) ||
-            Math.max(a.y, b.y) + gap < Math.min(segment.a.y, segment.b.y) ||
-            Math.min(a.y, b.y) - gap > Math.max(segment.a.y, segment.b.y)) continue;
-        if (segmentDistance(a, b, segment.a, segment.b) < gap) return false;
-      }
-    }
-    return true;
-  }
-
-  if (![config.trailLength, config.tailFadeLength].every(n => Number.isFinite(n) && n > 0) ||
-      config.tailFadeLength >= config.trailLength) throw new Error("Invalid trail settings");
-  let p = { x: width * (0.3 + random() * 0.4), y: height * (0.3 + random() * 0.4) };
-  const left = config.travelDirection === "left" || (config.travelDirection === "random" && random() < 0.5);
-  // A half-circle advances perpendicular to its initial tangent.
-  let heading = (left ? Math.PI : 0) - Math.sign(motif.peek().turn) * Math.PI / 2;
-  let arcs = [], mesh = [], endDistance = 0, head = 0, blocked = false, index = 0;
-
-  function commit(chosen) {
-    arcs.push({ ...chosen, start: p, heading, from: endDistance, to: endDistance + chosen.length, id: index });
-    for (let j=1; j<chosen.points.length; j++) mesh.push({ a:chosen.points[j-1], b:chosen.points[j], arc:index });
-    p = portals ? portals.canonical(chosen.end) : chosen.end; heading += chosen.turn;
-    endDistance += chosen.length; index++;
-  }
-
-  function motifHasRoom(instruction) {
-    let point=p, direction=heading, remaining=instruction.remainingLength, aheadIndex=index;
-    const future=[];
-    while (remaining > 1e-8) {
-      const length=Math.min(step,remaining);
-      const curve=propose(point,direction,Math.sign(instruction.turn)*length/instruction.radius,length);
-      if (!valid(curve,mesh,aheadIndex) || !valid(curve,future,aheadIndex)) return false;
-      for(let j=1;j<curve.points.length;j++) future.push({a:curve.points[j-1],b:curve.points[j],arc:aheadIndex});
-      point=portals?portals.canonical(curve.end):curve.end;
-      direction+=curve.turn;remaining-=length;aheadIndex++;
-    }
-    return true;
-  }
-  function extend() {
-    const instruction = motif.peek();
-    // Stop at a motif boundary rather than starting a section that cannot fit.
-    if (instruction.sectionStart && !motifHasRoom(instruction)) {
-      blocked = true;
-      return;
-    }
-    const curve = propose(p, heading, instruction.turn, instruction.length);
-    if (!valid(curve, mesh, index)) { blocked = true; return; }
-    commit({ ...curve, motifIndex:instruction.index });
-    motif.consume(instruction.length);
-  }
-
-  return {
-    advance(distance) {
-      if (!Number.isFinite(distance) || distance < head) throw new Error("Head distance must increase");
-      // Generate only at the head; retain all geometry still visible at this instant.
-      // Callers advance by at most one step, preventing jumps across collision history.
-      if (distance - head > step + 1e-7) throw new Error("Advance by at most one step");
-      while (!blocked && endDistance < distance) extend();
-      head = Math.min(distance, endDistance);
-      const tail = Math.max(0, head - config.trailLength - config.tailFadeLength);
-      arcs = arcs.filter(arc => arc.to > tail);
-      const first = arcs.length ? arcs[0].id : index;
-      mesh = mesh.filter(segment => segment.arc >= first);
-      return { head, tail, blocked: blocked && head >= endDistance,
-        arcs, mesh, length: head - tail };
-    },
-  };
+  const instances = motifs.map(({ x, y, rotation, delay }, index) => ({
+    x: x * spacing.x, y: y * spacing.y, delay, sign: rotation === 180 ? -1 : 1,
+    phase: random(2 + index) * motif.length,
+  }));
+  return { width, height, instances, offset: { x: random(0) * width, y: random(1) * height } };
 };
-(function initialize(config) {
-  const path = document.getElementById("trail");
-  const drawing = document.getElementById("drawing");
-  const ramp = document.getElementById("tail-ramp");
-  const body = document.getElementById("tail-body");
-  const headRamp = document.getElementById("head-ramp");
-  const headBody = document.getElementById("head-body");
-  const preference = matchMedia("(prefers-reduced-motion: reduce)");
-  const rampCount = 32;
-  const slice = createPathRenderer(config);
-  function createBands(group, brightness) {
-    group.replaceChildren();
-    return Array.from({ length: rampCount }, (_, i) => {
-      const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const luminance = Math.round(255 * brightness((i + 0.5) / rampCount));
-      node.setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+const createScene = function createScene(config, pattern) {
+  for (const key of ['motifWidth', 'strokeWidth', 'loopDuration', 'headFadePower']) {
+    if (!Number.isFinite(config[key]) || config[key] <= 0) throw new Error(`${key} must be positive`);
+  }
+  for (const key of ['blur', 'headFadeLength', 'tailFadeLength']) {
+    if (!Number.isFinite(config[key]) || config[key] < 0) throw new Error(`${key} must be non-negative`);
+  }
+  if (!Number.isFinite(config.opacity) || config.opacity < 0 || config.opacity > 1) {
+    throw new Error('Opacity must be between 0 and 1');
+  }
+  if (!Number.isFinite(config.trailFraction) || config.trailFraction <= 0 || config.trailFraction >= 1) {
+    throw new Error('Trail fraction must be between 0 and 1, exclusive');
+  }
+  if (typeof config.pauseBetweenDrawings !== 'boolean') throw new Error('Pause between drawings must be a boolean');
+  if (config.shadowEnabled &&
+      (![config.shadowOpacity, config.shadowOffsetX, config.shadowOffsetY].every(Number.isFinite) ||
+       config.shadowOpacity < 0 || config.shadowOpacity > 1)) {
+    throw new Error('Shadow opacity must be between 0 and 1, and offsets finite');
+  }
+  if (config.seed != null && !Number.isSafeInteger(config.seed)) throw new Error('Seed must be an integer or null');
+  if (config.patternOffset != null &&
+      ![config.patternOffset.x, config.patternOffset.y].every(Number.isFinite)) {
+    throw new Error('Pattern offset must be null or finite x/y tile fractions');
+  }
+  if (typeof config.randomStartingPositions !== 'boolean') throw new Error('Random starting positions must be a boolean');
+  const seed = config.seed ?? crypto.getRandomValues(new Uint32Array(1))[0];
+  const motif = createMotif(pattern);
+  const tile = createTile(pattern, motif, seed);
+  if (!config.randomStartingPositions) {
+    for (const instance of tile.instances) instance.phase = 0;
+  }
+  if (config.patternOffset != null) {
+    tile.offset = {
+      x: (config.patternOffset.x % 1) * tile.width,
+      y: (config.patternOffset.y % 1) * tile.height,
+    };
+  }
+  return { motif, tile, seed };
+};
+const initialize = function initialize(config, pattern, root = document.documentElement, still = false, scene = createScene(config, pattern)) {
+  const get = id => root.querySelector(`#${id}`);
+  const path = get('trail');
+  const body = get('tail-body');
+  const headBody = get('head-body');
+  const preference = matchMedia('(prefers-reduced-motion: reduce)');
+  const { motif, tile, seed } = scene;
+  root.dataset.seed = String(seed);
+  const slice = createPathRenderer(config, motif, tile);
+  const scale = config.motifWidth / motif.width;
+  get('motifs').setAttribute('patternTransform', `matrix(${scale} 0 0 ${scale} ${tile.offset.x * scale} ${tile.offset.y * scale})`);
+  const isStatic = () => still || preference.matches;
+  const count = 32;
+  function bands(id, brightness) {
+    const group = get(id);
+    return Array.from({ length: count }, (_, i) => {
+      const node = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const value = Math.round(255 * brightness((i + 0.5) / count));
+      node.setAttribute('stroke', `rgb(${value},${value},${value})`);
       group.appendChild(node);
       return node;
     });
   }
-  const bands = createBands(ramp, t => t);
-  const headBands = createBands(headRamp, t => Math.pow(1 - t, config.headFadePower));
-  let walker, head = 0, cycle = 0, frame, previousTime, fading = false, fadeTime = 0, disposed = false;
-
-  function reset() {
-    cancelAnimationFrame(frame);
-    const seed = config.seed == null ? crypto.getRandomValues(new Uint32Array(1))[0] : (config.seed + cycle) >>> 0;
-    cycle++;
-    document.documentElement.dataset.seed = String(seed);
-    head = 0; previousTime = undefined; fading = false; fadeTime = 0;
-    drawing.style.opacity = String(config.opacity);
-    path.setAttribute("d", ""); body.setAttribute("d", "");
-    [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
-    headBody.setAttribute("d", "");
-    walker = createTrail({ ...config, seed });
-    if (preference.matches) {
-      let state;
-      for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {
-        state = walker.advance(distance);
-        if (state.blocked) break;
+  const tails = bands('tail-ramp', t => t);
+  const heads = bands('head-ramp', t => Math.pow(1 - t, config.headFadePower));
+  let frame, previous, distance = 0, disposed = false;
+  const span = motif.length * config.trailFraction;
+  const tailSpan = Math.min(config.tailFadeLength, span);
+  const headSpan = Math.min(config.headFadeLength, span);
+  const cycling = config.pauseBetweenDrawings;
+  const cycleDuration = config.loopDuration * (1 + config.trailFraction);
+  const clocks = tile.instances.map(instance => ({ time: -instance.delay, delay: instance.delay }));
+  function render() {
+    let drawing = '', tailBody = '', leadingBody = '';
+    const tailPaths = Array(count).fill(''), headPaths = Array(count).fill('');
+    const staticMode = isStatic();
+    for (const [index, instance] of tile.instances.entries()) {
+      if (staticMode) {
+        drawing += ' ' + slice(instance, 0, motif.length);
+        continue;
       }
-      const d = state ? slice(state.arcs, state.tail, state.head) : "";
-      path.setAttribute("d", d); body.setAttribute("d", d);
-      headBody.setAttribute("d", d);
-      return;
+      let head = distance + instance.phase, tail = head - span;
+      if (cycling) {
+        const progress = clocks[index].time * motif.length / config.loopDuration;
+        if (progress <= 0 || progress >= motif.length + span) continue;
+        head = instance.phase + Math.min(progress, motif.length);
+        tail = instance.phase + Math.max(0, progress - span);
+      }
+      const tailRamp = Math.min(tailSpan, head - tail);
+      const headRamp = Math.min(headSpan, head - tail);
+      drawing += ' ' + slice(instance, tail, head);
+      tailBody += ' ' + slice(instance, tail + tailRamp, head);
+      leadingBody += ' ' + slice(instance, tail, head - headRamp);
+      for (let i = 0; i < count; i++) {
+        tailPaths[i] += ' ' + slice(instance, tail + tailRamp * i / count, tail + tailRamp * (i + 1) / count);
+        headPaths[i] += ' ' + slice(instance, head - headRamp + headRamp * i / count, head - headRamp + headRamp * (i + 1) / count);
+      }
     }
-    frame = requestAnimationFrame(tick);
+    path.setAttribute('d', drawing);
+    body.setAttribute('d', staticMode ? drawing : tailBody);
+    headBody.setAttribute('d', staticMode ? drawing : leadingBody);
+    tails.forEach((node, i) => node.setAttribute('d', tailPaths[i]));
+    heads.forEach((node, i) => node.setAttribute('d', headPaths[i]));
   }
-
-  function render(state) {
-    path.setAttribute("d", slice(state.arcs, state.tail, state.head));
-    // A second mask multiplies the tail mask, including when both ramps overlap.
-    const headSpan = Math.min(config.headFadeLength, head - state.tail);
-    const headStart = head - headSpan;
-    headBody.setAttribute("d", slice(state.arcs, state.tail, headStart));
-    for (let i = 0; i < rampCount; i++) {
-      const from = headStart + headSpan * i / rampCount;
-      const to = headStart + headSpan * (i + 1) / rampCount;
-      headBands[i].setAttribute("d", slice(state.arcs, from, to));
-    }
-    // Always taper the visible tail, including while its starting point is fixed.
-    const tailSpan = Math.min(config.tailFadeLength, head - state.tail);
-    const fadeEnd = state.tail + tailSpan;
-    body.setAttribute("d", slice(state.arcs, fadeEnd, head));
-    for (let i = 0; i < rampCount; i++) {
-      const from = state.tail + (fadeEnd - state.tail) * i / rampCount;
-      const to = state.tail + (fadeEnd - state.tail) * (i + 1) / rampCount;
-      bands[i].setAttribute("d", slice(state.arcs, from, to));
-    }
-  }
-
   function tick(timestamp) {
-    if (disposed || preference.matches) return;
-    const dt = previousTime === undefined ? 0 : Math.max(0, Math.min(50, timestamp - previousTime));
-    previousTime = timestamp;
-    if (fading) {
-      fadeTime += dt;
-      const t = Math.min(1, fadeTime / config.fadeDuration);
-      drawing.style.opacity = String(config.opacity * (1 - t * t * (3 - 2 * t)));
-      if (t >= 1) { reset(); return; }
+    if (disposed || isStatic()) return;
+    const dt = previous === undefined ? 0 : Math.max(0, Math.min(50, timestamp - previous));
+    previous = timestamp;
+    if (cycling) {
+      for (const clock of clocks) {
+        clock.time += dt / 1000;
+        if (clock.time >= cycleDuration) {
+          clock.time = (clock.time + clock.delay) % (cycleDuration + clock.delay) - clock.delay;
+        }
+      }
     } else {
-      let remaining = config.speed * dt / 1000;
-      let state;
-      // Small substeps preserve collision history even at high configured speed.
-      do {
-        const amount = Math.min(config.stepLength, remaining);
-        state = walker.advance(head + amount);
-        head = state.head;
-        remaining -= amount;
-      } while (remaining > 1e-9 && !state.blocked);
-      render(state);
-      if (state.blocked) { fading = true; fadeTime = 0; }
+      distance = (distance + motif.length * dt / (config.loopDuration * 1000)) % motif.length;
     }
+    render();
     frame = requestAnimationFrame(tick);
   }
-
-  function onPreferenceChange() { if (!disposed) reset(); }
-  preference.addEventListener("change", onPreferenceChange);
-  window.addEventListener("pagehide", event => {
-    if (event.persisted) return;
+  function onPreferenceChange() {
+    cancelAnimationFrame(frame); previous = undefined;
+    render();
+    if (!isStatic()) frame = requestAnimationFrame(tick);
+  }
+  function dispose() {
     disposed = true; cancelAnimationFrame(frame);
-    preference.removeEventListener("change", onPreferenceChange);
-  });
-  reset();
-})({"width":1200,"height":706,"margin":54,"wrapEdges":true,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#2466ce","shadowEnabled":true,"shadowColor":"#437bbc","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"backgroundTop":"#f5fcff","backgroundMiddle":"#e3f2ff","backgroundBottom":"#8ac4ff","speed":200,"trailLength":2393,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"fadeDuration":1400,"travelDirection":"right","motifRandomStart":true,"motifMirror":true,"motif":[{"radius":96,"sweep":3.141592653589793},{"radius":142,"sweep":-3.141592653589793}],"seed":null,"stepLength":18,"minGap":18});]]></script>
+    preference.removeEventListener('change', onPreferenceChange);
+    window.removeEventListener('pagehide', onPageHide);
+  }
+  function onPageHide(event) { if (!event.persisted) dispose(); }
+  preference.addEventListener('change', onPreferenceChange);
+  window.addEventListener('pagehide', onPageHide);
+  onPreferenceChange();
+  return dispose;
+};
+initialize({"patternOffset":{"x":0,"y":0},"motifWidth":360,"strokeWidth":38,"blur":13,"opacity":0.55,"color":"#2466ce","shadowEnabled":true,"shadowColor":"#437bbc","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"backgroundTop":"#f5fcff","backgroundMiddle":"#e3f2ff","backgroundBottom":"#8ac4ff","pauseBetweenDrawings":true,"loopDuration":18,"randomStartingPositions":true,"trailFraction":0.72,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"seed":null}, {"turns":[{"radius":142,"degrees":-90},{"radius":96,"degrees":180},{"radius":142,"degrees":-180},{"radius":96,"degrees":180},{"radius":142,"degrees":-90},{"radius":96,"degrees":270},{"radius":142,"degrees":-180},{"radius":96,"degrees":180},{"radius":142,"degrees":-180},{"radius":96,"degrees":270}],"tileWidth":2666,"tileHeight":708,"spacing":{"x":1,"y":1},"motifs":[{"x":0,"y":0,"rotation":0,"delay":0},{"x":238,"y":354,"rotation":180,"delay":3},{"x":1333,"y":354,"rotation":0,"delay":6},{"x":1571,"y":708,"rotation":180,"delay":9}]});]]></script>
 </svg>

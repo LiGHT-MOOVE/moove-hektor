@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Builds a self-contained SVG with a randomized, self-avoiding drawing animation",
+  "description": "Builds a self-contained SVG with responsive closed motifs with animated trails",
   "engines": { "node": ">=18" },
   "scripts": {
     "build": "node build.mjs"

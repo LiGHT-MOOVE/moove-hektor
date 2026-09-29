@@ -1,158 +1,177 @@
 # Moove Hektor
 
-Build a standalone SVG with embedded JavaScript, a blue gradient, and a soft,
-continuously drawn trail. No external packages or runtime assets are required.
+A standalone animated SVG built from a compact repeating tile. Two-radius closed
+motifs alternate upright and inverted, carrying soft moving trails. Inspired by
+**Hektor**, the project by **Jürg Lehni**. No runtime assets or dependencies.
 
-This project is inspired by **Hektor**, the project by **Jürg Lehni**.
+## Build and embed
 
-## Build and preview
-
-Requires Node.js 18 or newer.
-
-```sh
-npm run build
-```
-
-Open `hektor.svg` in a browser, or embed it with an object:
+Requires Node.js 18 or newer. Run `npm run build`, then open `hektor.svg` in a browser.
+Rebuild after changing source files or configuration.
 
 ```html
 <object type="image/svg+xml" data="/hektor.svg"
-        aria-label="Animated wandering line"
-        style="display:block;width:100%;aspect-ratio:1200/706;border:0">
+        aria-label="Animated Moove pattern"
+        style="position:fixed;inset:0;width:100%;height:100%;border:0;pointer-events:none">
 </object>
 ```
 
-Rebuild after source changes and reload. An `<img>` or CSS background does not
-execute embedded scripts. Your site's content security policy must permit the
-chosen embedding and script method.
+Give the object an explicit size. An `<img>` or CSS background does not execute
+embedded scripts. The site's content security policy must allow the embedding
+and script method.
 
-## Behavior
+## Design the repeat
 
-The visible tail always has an opacity ramp, even when its start is stationary.
-The ramp grows with very short paths, up to `tailFadeLength`, and then keeps that
-length as the tail begins moving. Tail removal follows distance travelled, never
-the age of individual segments. At the default speed, the tail starts moving after approximately 12.8 seconds,
-if the route survives that long.
+Open [the pattern studio](docs/pattern-preview.html) through your local web server.
+It shows a highlighted source tile in a 3 × 3 repeat, initially as complete thin
+outlines. Adjust tile width/height, then select a motif to change its center position
+or rotation (0° or 180°). Add/remove motifs as needed; a tile needs at least one.
+Positions can extend outside the tile because the renderer wraps at its edges.
+All placement controls are below the visualization.
 
-`trailLength` defaults to 2,393 units, approximately the measured perimeter of
-`ICON_MOOVE_B.svg` in its native viewBox. This is an aesthetic reference length,
-not a promise that the walker traces the logo. `tailFadeLength` adds a 160-unit
-fade zone, making the maximum visible span 2,553 units:
+Studio uses sliders with live values for tile dimensions and motif positions,
+plus an inversion checkbox. There are no image-specific presets. Reset restores
+the saved configuration. The source remains one
+`PATTERN` object in `config.js`: `turns`, `tileWidth`, `tileHeight`, `spacing`, and a `motifs`
+array of `{ x, y, rotation, delay }` placements. Motif count is no longer hardcoded.
 
-```text
-visible tail starts at = max(0, headDistance - trailLength - tailFadeLength)
-opaque trail starts at = min(headDistance, visibleTailStart + tailFadeLength)
-```
+**Horizontal spacing** and **Vertical spacing**, below the tile controls, adjust
+all motif centers and repeat dimensions together. `PATTERN.spacing: { x: 1, y: 1 }`
+preserves the base layout (100%); 1.2 increases center spacing by 20%. Motif size,
+rotation, and timing stay unchanged. Tile dimensions and individual positions are
+base values before spacing. Factors must be positive; smaller spacing can cause
+overlap. These percentages are independent of viewport size.
 
-A single colored SVG path is cropped analytically to this interval. A separate
-luminance mask uses a fixed pool of 32 short bands to soften only the tail. Blur
-is applied after masking, preserving the soft edge. Geometry is never split into
-independently timed, fading colored strokes. No mask or path elements accumulate. A second fixed pool of 32 mask bands ramps
-opacity down toward the head, giving the blurred stroke a visually tapered tip.
-This is an opacity taper, not a change to the geometric stroke width. Increase
-`headFadeLength` for a longer taper, or `headFadePower` for a finer tip. The two
-masks multiply safely even on short trails. Reduced-motion mode shows the full
-static stroke without an animated head taper.
+Use **Copy config.js** to replace the complete module and rebuild. Original
+comments, unedited values, and the turn sequence are preserved. Editing a motif
+updates its individual literals. When adding/removing motifs, the array is
+rewritten and any comments inside it are retained immediately before it.
+Unsupported or ambiguous literal syntax disables copying with an error.
+Preview-only appearance overrides, preview mode, and seed 42 are not exported.
+The preview uses the same SVG source as the build and does not persist changes.
 
-The trail follows a horizontal motif of alternating half-circles: radius 96,
-then radius 142. `travelDirection` selects rightward, leftward, or a random
-horizontal direction per attempt. Starting position, starting section, and
-mirroring provide variation. The initial tangent accounts for the first turn's
-sign and mirroring, so every half-circle advances in the chosen direction.
+Each turn supplies its radius directly, e.g. `{ radius: 142, degrees: -90 }`.
+Positive turns are clockwise. Any positive finite radius is supported; the full
+sequence must close in position and tangent. The default outline uses radii 96
+and 142; it is 1144 × 430 native units and about 3594 units long.
 
-Before starting a section, the walker checks the entire arc against the visible
-trail and its own future segments. If it cannot fit, drawing stops at the previous
-section boundary, fades, and restarts elsewhere. It does not detour or change
-orientation. Clearance is checked again before committing each small step.
-Tangents remain continuous, and the final step is shortened to finish each
-half-turn exactly. The motif must alternate positive and negative π sweeps,
-including across its repeat boundary; radii remain configurable.
+The saved four-motif layout retains its original positions, orientations, and
+seeded phases. Its sampled periodic-neighbor centerline clearance is about 73
+native units, versus a 38-unit stroke. Blur/shadow halos can blend. New placements
+can overlap; check complete outlines in the 3 × 3 preview. There is no runtime
+collision detection or packing solver.
 
-Collision detection retains all still-visible tail geometry, including the fade
-zone; entire old segments are released conservatively once fully behind the tail.
-The solid stroke keeps a gap from non-neighboring sections, while blur halos may
-blend. Earlier locations can be revisited only after their trail has disappeared.
+The [closed outline](docs/closed-motif.svg) and [static repeat](docs/tile-map.svg)
+are reference snapshots, not regenerated by the build. Use Studio for current settings.
 
-When the next complete section cannot fit, the entire visible line fades immediately
-and a new seeded attempt starts. The head does not wait for the tail to clear.
-Retries continue for as long as the document is active. Horizontal routes can wrap into their own history and stop before the tail starts
-moving. A shorter trail allowance releases space earlier; a longer one can produce
-more frequent draw–fade cycles. Full-section checks conservatively treat the
-currently visible tail as an obstacle throughout the forecast.
+Studio exposes **Pattern scale (`motifWidth`)** with desktop (1440 × 900) and
+mobile (390 × 844) screen previews and a calculated tile-density readout.
+Moving the scale slider switches from tile layout to screen preview. Screen
+previews may shrink to fit the page; their logical dimensions stay fixed.
+Copy `motifWidth` into `config.js` and rebuild to save the scale.
 
-SVG paths are constructed after simulation substeps finish, rather than on every
-walker advance. Reduced-motion mode likewise renders only its final geometry.
+## Repetition and screen size
 
-Reduced-motion mode uses the same walker to produce one static snapshot with no
-recurring animation, with or without portals. Background
-frame gaps are capped to avoid large jumps on return. Frame callbacks and media
-listeners are cleaned up on document disposal.
+A native SVG `<pattern>` fills the viewport. `motifWidth` is the displayed outline
+width in pixels (default 360). Mobile crops a narrower portion of the same pattern;
+it does not shrink motifs to fit. Stroke, blur, spacing, and shadow retain the same
+scale. Resizing only changes the crop and requires no resize observer.
 
-## Edge portals
+Desktop and mobile previews use the same logical pixel scale; the preview itself
+may be shrunk to fit the Studio. The default `patternOffset: { x: 0, y: 0 }` anchors
+both views to the same origin. Random placement remains optional. Random head
+positions can still differ between page loads unless `seed` is fixed. Tile
+inspection remains an unscaled 3 × 3 repeat.
 
-`wrapEdges: true` connects left/right and top/bottom edges. The walker preserves
-its direction, curvature, and travelled distance through each crossing. Coordinates
-are normalized after every step, keeping geometry numerically bounded.
+Wrapping now happens at **tile boundaries, not opposite screen edges**. A fragment
+leaving a tile continues in the adjacent tile with the same head phase and masks.
+An arbitrary screen crop does not promise that its opposite edges match.
 
-The renderer emits each short arc at the tile offsets where its bounds, expanded
-for stroke and blur, overlap the viewport. SVG clips the result after masking
-and blur, so no boundary-intersection search or explicit edge splitting is needed.
-Disconnected pieces use `M` subpaths inside the same SVG path; they never create
-long connections across the screen. Corner crossings naturally use both offsets.
+The renderer supplies neighboring fragments beyond the tile by the effect padding.
+Masking and blur happen before the native pattern clips and repeats the tile,
+keeping strokes and effects continuous across its seams and corners. The background
+gradient remains fixed across the screen rather than repeating per tile.
 
-These local translated arcs are render-only pieces, not copies of the full route
-or extra collision objects. Both opacity masks use the same renderer. All visible
-geometry shares one collision history, with periodic proximity checks across
-opposite edges and corners. Fading pieces remain obstacles until fully removed.
-Edges themselves never cause a retry in portal mode. The background gradient
-remains fixed.
+Set `CONFIG.patternOffset` to `{ x: 0.25, y: 0.5 }` to shift the entire field
+by fractions of the repeat tile, or leave it `null` for seeded random placement.
+Positive values move right/down; negative values move left/up. Whole-tile shifts
+are equivalent. Offsets scale with `motifWidth` and do not change trail phases.
+Studio exposes **Random placement** and horizontal/vertical percentage sliders;
+these switch to screen preview, while tile layout stays anchored. Studio uses
+seed 42 for a stable preview of random settings.
 
-Set `wrapEdges: false` to restore solid boundaries and the configured `margin`.
-Reduced-motion mode also uses wrapped geometry when portals are enabled.
+## Animation
 
-## Settings
+`pauseBetweenDrawings: true` makes each motif use its own `delay` in seconds,
+before the first drawing and between completed drawing cycles. The head draws
+one circuit, then the tail finishes exiting. At the default duration/fraction,
+drawing and draining take 18 × 1.72 = 30.96 seconds; the motif's fixed delay is
+added to that duration. Different delays create different repeating periods.
+A delay of zero draws/drains immediately again. Set `pauseBetweenDrawings: false`
+for continuous movement, ignoring delays. Studio exposes a per-motif delay slider
+and the global pause toggle. Defaults stagger motifs by 0, 3, 6 and 9 seconds.
+Static inspection and reduced motion still show complete outlines.
 
-Edit `config.js` and rebuild:
+`CONFIG.randomStartingPositions` controls where the drawing heads start.
+With `true` (the default), each gets a seeded random position along its loop.
+With `false`, all start at position zero on their respective motifs. Rotation
+still applies, so inverted motifs retain their orientation. Pattern placement
+is independent of these starting positions.
 
-| Setting | Effect |
+Studio exposes **Random starting positions**; changing it restarts the preview
+with animation enabled. Reset restores saved settings and switches animation
+and effects off.
+
+All repetitions of a motif share its phase, so the animation itself repeats spatially. Bounded per-motif clocks drive drawing/pause cycles; a shared modulo clock
+drives continuous mode. `loopDuration` sets seconds per circuit. No geometry
+history, route search, collision state, or automatic restart is retained.
+
+Studio’s **Trail length** slider sets `trailFraction` as a percentage of each
+perimeter, including the fading ends (default 72%). Changing it enables animation;
+Reset restores the saved value and Copy config.js preserves it. Longer trails also
+take longer to drain before the next pause. Distance windows
+crossing the loop seam are split smoothly. Two fixed pools of 32 mask bands soften
+the head and tail. All motifs share the paths, masks, and one Gaussian blur;
+the optional shadow reuses the blurred alpha. Native repetition does not add DOM
+nodes for additional screen tiles. Rendering cost can still increase with screen
+area and filters; native repetition is not a promise of GPU caching.
+
+Reduced motion shows complete static outlines without scheduling frames.
+Preference changes preserve phase. Frame gaps are capped at 50 ms, and listeners
+and animation frames are released on disposal. A seeded shared pattern offset
+varies the crop on each load without altering packing.
+
+## Configuration
+
+`config.js` centralizes all settings in two objects: `PATTERN` for geometry and
+placement, and `CONFIG` for display and animation. The `CONFIG` settings are:
+
+| Setting | Meaning |
 | --- | --- |
-| `trailLength` | Full-opacity trail allowance, plus the tail fade zone before removal |
-| `tailFadeLength` | Always-on tail ramp length, including before tail removal |
-| `headFadeLength` | Leading opacity ramp length; 0 disables it (default 110) |
-| `headFadePower` | Ramp shape: 1 is linear; higher values make a finer tip (default 1.8) |
-| `speed` | Drawing speed in viewBox units per second |
-| `fadeDuration` | Whole-line fade before retry, in milliseconds |
-| `travelDirection` | Horizontal travel: `"right"` (default), `"left"`, or `"random"` per attempt |
-| `motif` | Ordered `{ radius, sweep }` turns; sweeps must alternate +π and −π |
-| `motifRandomStart`, `motifMirror` | Vary the starting section and mirror per attempt |
-| `wrapEdges` | Connect opposite edges; false restores solid boundaries |
-| `margin` | Boundary inset when wrapping is disabled |
-| `minGap` | Gap between solid strokes |
-| `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
-| `shadowEnabled` | Enable the subtle drop shadow; false removes it |
-| `shadowColor`, `shadowOpacity` | Shadow tint and strength (default muted blue, 0.4) |
-| `shadowOffsetX`, `shadowOffsetY` | Shadow displacement in viewBox units (default -32, 32) |
-| `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
-| `seed` | Null for random retries; an integer for a reproducible seed sequence |
-
-A shorter trail threshold releases space sooner; a longer threshold keeps more
-of the drawing visible but can cause earlier collisions. The seed for the current
-attempt appears on the SVG root as `data-seed`.
-
-The shadow reuses the already-blurred trail's alpha, offsets and tints it, then
-composites the trail above it. Only one Gaussian blur is needed; shadow softness
-uses the same `blur` setting as the trail. It follows both tip ramps and whole-line
-fading. Portal rendering includes its additional
-extent to preserve edge continuity. It does not affect collision clearance.
-Set `shadowEnabled: false` and rebuild to restore the appearance without shadow.
+| `motifWidth` | Displayed outline width in pixels |
+| `patternOffset` | Null for seeded random placement, or `{ x, y }` tile fractions |
+| `loopDuration` | Seconds per complete circuit |
+| `pauseBetweenDrawings` | Draw/drain cycles with per-motif delays; false enables continuous movement |
+| `randomStartingPositions` | Seeded random trail starts when true; all start at zero when false |
+| `trailFraction` | Visible perimeter fraction, between 0 and 1 |
+| `headFadeLength`, `tailFadeLength` | Native opacity-ramp lengths; either length may be zero |
+| `headFadePower` | Leading taper exponent |
+| `strokeWidth`, `blur`, `opacity`, `color` | Appearance; native lengths scale with the pattern |
+| `shadowEnabled`, `shadowColor`, `shadowOpacity` | Optional shadow appearance |
+| `shadowOffsetX`, `shadowOffsetY` | Native shadow displacement |
+| `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Screen-wide gradient |
+| `seed` | Null for fresh offset/phases, or an integer for reproducibility |
 
 ## Source structure
 
-- `build.mjs`: embeds all runtime functions and configuration into `hektor.svg`.
-- `motif.js`: alternating half-turn sequence and section progress.
-- `trail.js`: horizontal motif simulation, section clearance, and bounded collision history.
-- `geometry.js`: shared arc evaluation and segment-distance mathematics.
-- `renderer.js`: distance slicing and SVG path construction with local tile offsets.
-- `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.
-- `portals.js`: coordinate wrapping, relevant tile offsets, and periodic collision checks.
-- `config.js`: appearance, geometry, length and timing settings.
+- `config.js`: all settings, grouped into `PATTERN` (geometry/placement) and `CONFIG` (display/timing).
+- `motif.js`: static arc geometry, bounds, and closure validation.
+- `tile.js`: configured motif transforms, phases, and shared offset.
+- `geometry.js`: circular point evaluation and distance slicing.
+- `repeats.js`: neighboring tile translations for seam-safe fragments.
+- `renderer.js`: rotated loop intervals and padded tile fragments.
+- `animation.js`: one tile's distance windows and shared masks.
+- `scene.js`: shared settings validation and prepared motif/tile geometry.
+- `svg.js`: shared SVG markup for the build and Studio.
+- `docs/pattern-preview.js`: Studio controls and preview lifecycle.
+- `build.mjs`: embed the runtime and native pattern into `hektor.svg`.

@@ -1,106 +1,101 @@
-/** Distance-based reveal and tail mask, with unlimited fresh-seed retries. */
-export function initialize(config) {
-  const path = document.getElementById("trail");
-  const drawing = document.getElementById("drawing");
-  const ramp = document.getElementById("tail-ramp");
-  const body = document.getElementById("tail-body");
-  const headRamp = document.getElementById("head-ramp");
-  const headBody = document.getElementById("head-body");
-  const preference = matchMedia("(prefers-reduced-motion: reduce)");
-  const rampCount = 32;
-  const slice = createPathRenderer(config);
-  function createBands(group, brightness) {
-    group.replaceChildren();
-    return Array.from({ length: rampCount }, (_, i) => {
-      const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const luminance = Math.round(255 * brightness((i + 0.5) / rampCount));
-      node.setAttribute("stroke", `rgb(${luminance},${luminance},${luminance})`);
+import { createScene } from './scene.js';
+import { createPathRenderer } from './renderer.js';
+
+/** Animate one tile; native SVG pattern repetition fills any viewport. */
+export function initialize(config, pattern, root = document.documentElement, still = false, scene = createScene(config, pattern)) {
+  const get = id => root.querySelector(`#${id}`);
+  const path = get('trail');
+  const body = get('tail-body');
+  const headBody = get('head-body');
+  const preference = matchMedia('(prefers-reduced-motion: reduce)');
+  const { motif, tile, seed } = scene;
+  root.dataset.seed = String(seed);
+  const slice = createPathRenderer(config, motif, tile);
+  const scale = config.motifWidth / motif.width;
+  get('motifs').setAttribute('patternTransform', `matrix(${scale} 0 0 ${scale} ${tile.offset.x * scale} ${tile.offset.y * scale})`);
+  const isStatic = () => still || preference.matches;
+  const count = 32;
+  function bands(id, brightness) {
+    const group = get(id);
+    return Array.from({ length: count }, (_, i) => {
+      const node = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const value = Math.round(255 * brightness((i + 0.5) / count));
+      node.setAttribute('stroke', `rgb(${value},${value},${value})`);
       group.appendChild(node);
       return node;
     });
   }
-  const bands = createBands(ramp, t => t);
-  const headBands = createBands(headRamp, t => Math.pow(1 - t, config.headFadePower));
-  let walker, head = 0, cycle = 0, frame, previousTime, fading = false, fadeTime = 0, disposed = false;
-
-  function reset() {
-    cancelAnimationFrame(frame);
-    const seed = config.seed == null ? crypto.getRandomValues(new Uint32Array(1))[0] : (config.seed + cycle) >>> 0;
-    cycle++;
-    document.documentElement.dataset.seed = String(seed);
-    head = 0; previousTime = undefined; fading = false; fadeTime = 0;
-    drawing.style.opacity = String(config.opacity);
-    path.setAttribute("d", ""); body.setAttribute("d", "");
-    [...bands, ...headBands].forEach(node => node.setAttribute("d", ""));
-    headBody.setAttribute("d", "");
-    walker = createTrail({ ...config, seed });
-    if (preference.matches) {
-      let state;
-      for (let distance = config.stepLength; distance <= config.trailLength + config.tailFadeLength; distance += config.stepLength) {
-        state = walker.advance(distance);
-        if (state.blocked) break;
+  const tails = bands('tail-ramp', t => t);
+  const heads = bands('head-ramp', t => Math.pow(1 - t, config.headFadePower));
+  let frame, previous, distance = 0, disposed = false;
+  const span = motif.length * config.trailFraction;
+  const tailSpan = Math.min(config.tailFadeLength, span);
+  const headSpan = Math.min(config.headFadeLength, span);
+  const cycling = config.pauseBetweenDrawings;
+  const cycleDuration = config.loopDuration * (1 + config.trailFraction);
+  const clocks = tile.instances.map(instance => ({ time: -instance.delay, delay: instance.delay }));
+  function render() {
+    let drawing = '', tailBody = '', leadingBody = '';
+    const tailPaths = Array(count).fill(''), headPaths = Array(count).fill('');
+    const staticMode = isStatic();
+    for (const [index, instance] of tile.instances.entries()) {
+      if (staticMode) {
+        drawing += ' ' + slice(instance, 0, motif.length);
+        continue;
       }
-      const d = state ? slice(state.arcs, state.tail, state.head) : "";
-      path.setAttribute("d", d); body.setAttribute("d", d);
-      headBody.setAttribute("d", d);
-      return;
+      let head = distance + instance.phase, tail = head - span;
+      if (cycling) {
+        const progress = clocks[index].time * motif.length / config.loopDuration;
+        if (progress <= 0 || progress >= motif.length + span) continue;
+        head = instance.phase + Math.min(progress, motif.length);
+        tail = instance.phase + Math.max(0, progress - span);
+      }
+      const tailRamp = Math.min(tailSpan, head - tail);
+      const headRamp = Math.min(headSpan, head - tail);
+      drawing += ' ' + slice(instance, tail, head);
+      tailBody += ' ' + slice(instance, tail + tailRamp, head);
+      leadingBody += ' ' + slice(instance, tail, head - headRamp);
+      for (let i = 0; i < count; i++) {
+        tailPaths[i] += ' ' + slice(instance, tail + tailRamp * i / count, tail + tailRamp * (i + 1) / count);
+        headPaths[i] += ' ' + slice(instance, head - headRamp + headRamp * i / count, head - headRamp + headRamp * (i + 1) / count);
+      }
     }
-    frame = requestAnimationFrame(tick);
+    path.setAttribute('d', drawing);
+    body.setAttribute('d', staticMode ? drawing : tailBody);
+    headBody.setAttribute('d', staticMode ? drawing : leadingBody);
+    tails.forEach((node, i) => node.setAttribute('d', tailPaths[i]));
+    heads.forEach((node, i) => node.setAttribute('d', headPaths[i]));
   }
-
-  function render(state) {
-    path.setAttribute("d", slice(state.arcs, state.tail, state.head));
-    // A second mask multiplies the tail mask, including when both ramps overlap.
-    const headSpan = Math.min(config.headFadeLength, head - state.tail);
-    const headStart = head - headSpan;
-    headBody.setAttribute("d", slice(state.arcs, state.tail, headStart));
-    for (let i = 0; i < rampCount; i++) {
-      const from = headStart + headSpan * i / rampCount;
-      const to = headStart + headSpan * (i + 1) / rampCount;
-      headBands[i].setAttribute("d", slice(state.arcs, from, to));
-    }
-    // Always taper the visible tail, including while its starting point is fixed.
-    const tailSpan = Math.min(config.tailFadeLength, head - state.tail);
-    const fadeEnd = state.tail + tailSpan;
-    body.setAttribute("d", slice(state.arcs, fadeEnd, head));
-    for (let i = 0; i < rampCount; i++) {
-      const from = state.tail + (fadeEnd - state.tail) * i / rampCount;
-      const to = state.tail + (fadeEnd - state.tail) * (i + 1) / rampCount;
-      bands[i].setAttribute("d", slice(state.arcs, from, to));
-    }
-  }
-
   function tick(timestamp) {
-    if (disposed || preference.matches) return;
-    const dt = previousTime === undefined ? 0 : Math.max(0, Math.min(50, timestamp - previousTime));
-    previousTime = timestamp;
-    if (fading) {
-      fadeTime += dt;
-      const t = Math.min(1, fadeTime / config.fadeDuration);
-      drawing.style.opacity = String(config.opacity * (1 - t * t * (3 - 2 * t)));
-      if (t >= 1) { reset(); return; }
+    if (disposed || isStatic()) return;
+    const dt = previous === undefined ? 0 : Math.max(0, Math.min(50, timestamp - previous));
+    previous = timestamp;
+    if (cycling) {
+      for (const clock of clocks) {
+        clock.time += dt / 1000;
+        if (clock.time >= cycleDuration) {
+          clock.time = (clock.time + clock.delay) % (cycleDuration + clock.delay) - clock.delay;
+        }
+      }
     } else {
-      let remaining = config.speed * dt / 1000;
-      let state;
-      // Small substeps preserve collision history even at high configured speed.
-      do {
-        const amount = Math.min(config.stepLength, remaining);
-        state = walker.advance(head + amount);
-        head = state.head;
-        remaining -= amount;
-      } while (remaining > 1e-9 && !state.blocked);
-      render(state);
-      if (state.blocked) { fading = true; fadeTime = 0; }
+      distance = (distance + motif.length * dt / (config.loopDuration * 1000)) % motif.length;
     }
+    render();
     frame = requestAnimationFrame(tick);
   }
-
-  function onPreferenceChange() { if (!disposed) reset(); }
-  preference.addEventListener("change", onPreferenceChange);
-  window.addEventListener("pagehide", event => {
-    if (event.persisted) return;
+  function onPreferenceChange() {
+    cancelAnimationFrame(frame); previous = undefined;
+    render();
+    if (!isStatic()) frame = requestAnimationFrame(tick);
+  }
+  function dispose() {
     disposed = true; cancelAnimationFrame(frame);
-    preference.removeEventListener("change", onPreferenceChange);
-  });
-  reset();
+    preference.removeEventListener('change', onPreferenceChange);
+    window.removeEventListener('pagehide', onPageHide);
+  }
+  function onPageHide(event) { if (!event.persisted) dispose(); }
+  preference.addEventListener('change', onPreferenceChange);
+  window.addEventListener('pagehide', onPageHide);
+  onPreferenceChange();
+  return dispose;
 }

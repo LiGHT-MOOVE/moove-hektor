@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>moove-hektor studio</title>
+<style>
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-padding-top: calc(42vh + 28px);
+}
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: #192b3c;
+  font: 15px system-ui,sans-serif;
+}
+main {
+  max-width: 1500px;
+  margin: auto;
+  padding: 28px;
+}
+h1 {
+  font-size: 25px;
+  margin: 0 0 8px;
+}
+p {
+  color: #506477;
+}
+form {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 20px 0;
+}
+.control-break {
+  flex-basis: 100%;
+}
+label {
+  display: grid;
+  gap: 7px;
+  min-width: 170px;
+}
+output {
+  font-variant-numeric: tabular-nums;
+}
+input[type=range] {
+  width: 190px;
+}
+button {
+  border: 1px solid #c6d3df;
+  border-radius: 7px;
+  padding: 8px 14px;
+  background: white;
+  color: inherit;
+  cursor: pointer;
+}
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  margin: 0 0 20px;
+}
+.toggles label {
+  display: block;
+  min-width: 0;
+}
+#canvas {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+  width: min(100%, calc(42vh * var(--ratio)));
+  box-shadow: 0 4px 18px #192b3c1a;
+  background: white;
+  border: 1px solid #ccd8e3;
+  border-radius: 10px;
+  overflow: hidden;
+}
+#canvas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--ratio);
+}
+pre {
+  font-size: 13px;
+  white-space: pre-wrap;
+  padding: 16px;
+  background: #eaf0f6;
+  border-radius: 8px;
+}
+a {
+  color: #2466ce;
+}
+
+</style>
+<main>
+<h1>moove-hektor studio</h1>
+<p>Adjust one tile while viewing its 3 × 3 repeat. The blue rectangle marks the source tile. Changes here are previews; copy the settings into <code>config.js</code>, then rebuild to save them.</p>
+<p id="density" aria-live="polite"></p>
+<div id="canvas" aria-label="Nine repeated pattern tiles"></div>
+<h2>Pattern settings</h2>
+<form id="controls">
+<label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="any"></label>
+<label>Tile height <output id="tileHeight-value"></output><input id="tileHeight" type="range" min="100" max="2000" step="any"></label>
+<div class="control-break"></div>
+<label>Horizontal spacing <output id="spacing-x-value"></output><input id="spacing-x" type="range" data-unit="%" min="25" max="200" step="any"></label>
+<label>Vertical spacing <output id="spacing-y-value"></output><input id="spacing-y" type="range" data-unit="%" min="25" max="200" step="any"></label>
+</form>
+<p>100% preserves the base layout. Spacing adjusts motif centers and tile dimensions together, without resizing motifs. Smaller values can cause overlaps.</p>
+<form id="motif-controls">
+<label>Motif <select id="selected-motif"></select></label>
+<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" min="-3000" max="5000" step="any"></label>
+<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" min="-2000" max="3000" step="any"></label>
+<label>Drawing delay (seconds) <output id="motif-delay-value"></output><input id="motif-delay" type="range" min="0" max="60" step="any"></label>
+<label><span><input id="motif-invert" type="checkbox"> Invert motif</span></label>
+</form>
+<div class="toggles"><button id="add-motif" type="button">Add motif</button><button id="remove-motif" type="button">Remove motif</button></div>
+<p>Positions locate each motif’s center in native units before spacing is applied. Motifs wrap at tile boundaries. Select a motif, then adjust its position and inversion.</p>
+<p id="layout-error" role="status"></p>
+<div class="toggles">
+  <label><input id="animate" type="checkbox"> Animate trails</label>
+  <label><input id="random-phases" type="checkbox"> Random starting positions</label>
+  <label><input id="effects" type="checkbox"> Blur and shadow</label><button id="reset" type="button">Reset</button>
+  <a href="../hektor.svg">Fullscreen animation</a>
+</div>
+<p>Random starting positions gives each trail a seeded starting point. When disabled, all trails start at position zero on their motifs.</p>
+<div class="toggles"><label><input id="pause-trails" type="checkbox"> Pause between drawings</label></div>
+<label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="any"></label>
+<p>Trail length is a percentage of the motif perimeter, including the fading ends. Changing it enables animation; reduced motion still shows complete outlines.</p>
+<p>Each motif uses its own fixed drawing delay, before the first drawing and after its tail finishes. Disable pauses for continuous movement. Repeated tile copies share their motif’s timing.</p>
+<form id="preview-controls">
+<label>Motif width (pixels) <output id="motifWidth-value"></output><input id="motifWidth" type="range" data-unit=" px" min="100" max="1000" step="any"></label>
+<label>Preview mode <select id="preview-mode">
+<option value="layout">Tile layout (3 × 3)</option>
+<option value="desktop">Desktop (1440 × 900)</option>
+<option value="mobile">Mobile (390 × 844)</option>
+</select></label>
+</form>
+<div class="toggles"><label><input id="random-placement" type="checkbox"> Random placement</label></div>
+<form id="pattern-placement">
+<label>Horizontal placement <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="any"></label>
+<label>Vertical placement <output id="offset-y-value"></output><input id="offset-y" type="range" data-unit="%" min="-100" max="100" step="any"></label>
+</form>
+<p>Placement is a percentage of one tile. Positive values move right/down. Whole-tile shifts repeat the same placement. Adjusting placement switches to screen preview; tile layout stays anchored.</p>
+
+<h2>config.js</h2>
+<p>Comments and untouched settings are preserved. Replace the contents of <code>config.js</code> with this complete module, then run <code>npm run build</code>. Preview mode, animation/effects toggles, and the preview seed are not exported; saved appearance and seed settings are preserved.</p>
+<button id="copy-config" type="button">Copy config.js</button>
+<span id="copy-status" role="status"></span>
+<pre id="config-source" tabindex="0" aria-label="Complete config.js"></pre>
+</main>
+<script type="module" src="./pattern-preview.js"></script>
+</html>

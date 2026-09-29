@@ -21,20 +21,15 @@ export const CONFIG = {
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
   headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.
   tailFadeLength: 160, // Always-on tail opacity ramp length, including before the tail moves.
-  straightChance: 0.22, // Chance of a short straight passage at a steering decision.
-  turnEase: 0.035, // Maximum change in turn per step; eases into/out of straights.
   fadeDuration: 1400, // Clear the old line before starting another.
-  motifEnabled: true,
+  travelDirection: "right", // "left", "right", or "random" for each new trail.
   motifRandomStart: true, // Choose a starting section for each attempt.
   motifMirror: true, // Randomly mirror the whole sequence.
-  motif: [ // Signed sweeps in radians; radius = diameter / 2.
+  motif: [ // Alternating ±Math.PI half-turns; radius = diameter / 2.
     { radius: 96, sweep: Math.PI },
     { radius: 142, sweep: -Math.PI },
   ],
   seed: null, // Fresh on load; set an integer to reproduce a route.
   stepLength: 18,
   minGap: 18, // Gap between solid strokes; soft blur halos may overlap.
-  radii: [96, 142], // Logo-inspired ratio: approximately 64 : 94.5.
-  searchBudget: 2400, // Bounded candidate/backtracking operations per attempt.
-  attempts: 6,
 };

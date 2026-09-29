@@ -31,7 +31,7 @@ chosen embedding and script method.
 The visible tail always has an opacity ramp, even when its start is stationary.
 The ramp grows with very short paths, up to `tailFadeLength`, and then keeps that
 length as the tail begins moving. Tail removal follows distance travelled, never
-the age of individual segments. At the default speed, the tail starts moving after approximately 23.2 seconds,
+the age of individual segments. At the default speed, the tail starts moving after approximately 12.8 seconds,
 if the route survives that long.
 
 `trailLength` defaults to 2,393 units, approximately the measured perimeter of
@@ -54,35 +54,37 @@ This is an opacity taper, not a change to the geometric stroke width. Increase
 masks multiply safely even on short trails. Reduced-motion mode shows the full
 static stroke without an animated head taper.
 
-The default movement repeats two signed circular turns: a small outward
-half-turn (radius 96), then a larger inward half-turn (radius 142). This echoes
-the logo's alternating convex lobes and concave connections without targeting
-an exact outline. Each attempt randomizes its starting section and can mirror
-the sequence. Turns join with continuous tangents, and their final step is
-shortened to finish the configured sweep exactly.
+The trail follows a horizontal motif of alternating half-circles: radius 96,
+then radius 142. `travelDirection` selects rightward, leftward, or a random
+horizontal direction per attempt. Starting position, starting section, and
+mirroring provide variation. The initial tangent accounts for the first turn's
+sign and mirroring, so every half-circle advances in the chosen direction.
 
-Before starting a section, the walker checks that the arc has room. If blocked,
-the existing local steering takes over, including occasional eased straights.
-The interrupted section restarts from the current position and heading once
-there is room for it. No target positions or rejoining paths are stored.
+Before starting a section, the walker checks the entire arc against the visible
+trail and its own future segments. If it cannot fit, drawing stops at the previous
+section boundary, fades, and restarts elsewhere. It does not detour or change
+orientation. Clearance is checked again before committing each small step.
+Tangents remain continuous, and the final step is shortened to finish each
+half-turn exactly. The motif must alternate positive and negative π sweeps,
+including across its repeat boundary; radii remain configurable.
 
-Set `motifEnabled: false` to restore the free walker and its bounded opening-route
-search. Already displayed geometry is never backtracked.
 Collision detection retains all still-visible tail geometry, including the fade
 zone; entire old segments are released conservatively once fully behind the tail.
 The solid stroke keeps a gap from non-neighboring sections, while blur halos may
 blend. Earlier locations can be revisited only after their trail has disappeared.
 
-When no valid continuation remains, the entire visible line fades immediately
+When the next complete section cannot fit, the entire visible line fades immediately
 and a new seeded attempt starts. The head does not wait for the tail to clear.
-Retries continue for as long as the document is active. Some routes end before
-they reach the tail threshold, depending on their geometry.
+Retries continue for as long as the document is active. Horizontal routes can wrap into their own history and stop before the tail starts
+moving. A shorter trail allowance releases space earlier; a longer one can produce
+more frequent draw–fade cycles. Full-section checks conservatively treat the
+currently visible tail as an obstacle throughout the forecast.
 
 SVG paths are constructed after simulation substeps finish, rather than on every
 walker advance. Reduced-motion mode likewise renders only its final geometry.
 
 Reduced-motion mode uses the same walker to produce one static snapshot with no
-recurring animation, including when the motif and portals are disabled. Background
+recurring animation, with or without portals. Background
 frame gaps are capped to avoid large jumps on return. Frame callbacks and media
 listeners are cleaned up on document disposal.
 
@@ -120,12 +122,9 @@ Edit `config.js` and rebuild:
 | `headFadePower` | Ramp shape: 1 is linear; higher values make a finer tip (default 1.8) |
 | `speed` | Drawing speed in viewBox units per second |
 | `fadeDuration` | Whole-line fade before retry, in milliseconds |
-| `motifEnabled` | Prefer the repeating motif; false restores free movement |
-| `motif` | Ordered `{ radius, sweep }` turns; signed sweeps in radians, diameter = twice radius |
+| `travelDirection` | Horizontal travel: `"right"` (default), `"left"`, or `"random"` per attempt |
+| `motif` | Ordered `{ radius, sweep }` turns; sweeps must alternate +π and −π |
 | `motifRandomStart`, `motifMirror` | Vary the starting section and mirror per attempt |
-| `straightChance` | Chance of a short straight passage during free steering |
-| `turnEase` | Maximum change of turn per step during transitions |
-| `radii` | Two preferred circular turning sizes |
 | `wrapEdges` | Connect opposite edges; false restores solid boundaries |
 | `margin` | Boundary inset when wrapping is disabled |
 | `minGap` | Gap between solid strokes |
@@ -135,7 +134,6 @@ Edit `config.js` and rebuild:
 | `shadowOffsetX`, `shadowOffsetY` | Shadow displacement in viewBox units (default -32, 32) |
 | `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Vertical gradient |
 | `seed` | Null for random retries; an integer for a reproducible seed sequence |
-| `searchBudget`, `attempts` | Bounded opening-route exploration when motif is disabled |
 
 A shorter trail threshold releases space sooner; a longer threshold keeps more
 of the drawing visible but can cause earlier collisions. The seed for the current
@@ -151,8 +149,8 @@ Set `shadowEnabled: false` and rebuild to restore the appearance without shadow.
 ## Source structure
 
 - `build.mjs`: embeds all runtime functions and configuration into `hektor.svg`.
-- `motif.js`: repeating turn sequence and interrupted-section progress.
-- `trail.js`: bounded-memory simulation, collision history, and movement planning.
+- `motif.js`: alternating half-turn sequence and section progress.
+- `trail.js`: horizontal motif simulation, section clearance, and bounded collision history.
 - `geometry.js`: shared arc evaluation and segment-distance mathematics.
 - `renderer.js`: distance slicing and SVG path construction with local tile offsets.
 - `animation.js`: continuous reveal, fixed tail mask, collision fade and retries.

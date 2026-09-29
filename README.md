@@ -32,15 +32,20 @@ All placement controls are below the visualization.
 Studio uses sliders with live values for tile dimensions and motif positions,
 plus an inversion checkbox. There are no image-specific presets. Reset restores
 the saved configuration. The source remains one
-`PATTERN` object in `config.js`: `turns`, `tileWidth`, `tileHeight`, `spacing`, and a `motifs`
+`PATTERN` object in `config.js`: `turns`, `tileWidth`, `tileHeight`, and a `motifs`
 array of `{ x, y, rotation, delay }` placements. Motif count is no longer hardcoded.
 
-**Horizontal spacing** and **Vertical spacing**, below the tile controls, adjust
-all motif centers and repeat dimensions together. `PATTERN.spacing: { x: 1, y: 1 }`
-preserves the base layout (100%); 1.2 increases center spacing by 20%. Motif size,
-rotation, and timing stay unchanged. Tile dimensions and individual positions are
-base values before spacing. Factors must be positive; smaller spacing can cause
-overlap. These percentages are independent of viewport size.
+**Tile width** and **Tile height** control repeat spacing without resizing motifs.
+Motif centers are tile fractions: `x: 0.5` is halfway across the tile and `y: 1`
+is its bottom edge. Studio displays these positions as percentages. Resizing a
+tile moves its motifs proportionally, preserving the arrangement across repeat
+boundaries. Positions may be negative or greater than 1; they wrap naturally.
+Smaller tiles can cause overlap. Tile fractions are independent of viewport size,
+so mobile still crops the same-sized pattern.
+
+For older configurations using native-unit positions and `spacing`, divide each
+motif's x/y by the old tile width/height, then multiply the tile dimensions by
+spacing.x/y and remove `spacing`. This preserves the original rendered layout.
 
 Use **Copy config.js** to replace the complete module and rebuild. Original
 comments, unedited values, and the turn sequence are preserved. Editing a motif

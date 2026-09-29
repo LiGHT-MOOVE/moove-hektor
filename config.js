@@ -42,13 +42,12 @@ export const PATTERN = {
   ],
   tileWidth: 2666,
   tileHeight: 708,
-  spacing: { x: 1, y: 1 }, // Positive center-spacing factors; motif size stays unchanged.
-  // Motif centers in native units. Rotation is 0 or 180 degrees.
+  // Motif centers as tile fractions (0.5 = halfway). Rotation is 0 or 180 degrees.
   // Delay is seconds before the first drawing and between complete cycles.
   motifs: [
     { x: 0, y: 0, rotation: 0, delay: 0 },
-    { x: 238, y: 354, rotation: 180, delay: 3 },
-    { x: 1333, y: 354, rotation: 0, delay: 6 },
-    { x: 1571, y: 708, rotation: 180, delay: 9 },
+    { x: 0.08927231807951988, y: 0.5, rotation: 180, delay: 3 },
+    { x: 0.5, y: 0.5, rotation: 0, delay: 6 },
+    { x: 0.5892723180795199, y: 1, rotation: 180, delay: 9 },
   ],
 };

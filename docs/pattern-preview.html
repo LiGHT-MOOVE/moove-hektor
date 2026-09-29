@@ -34,9 +34,6 @@ form {
   flex-wrap: wrap;
   padding: 20px 0;
 }
-.control-break {
-  flex-basis: 100%;
-}
 label {
   display: grid;
   gap: 7px;
@@ -105,20 +102,17 @@ a {
 <form id="controls">
 <label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="any"></label>
 <label>Tile height <output id="tileHeight-value"></output><input id="tileHeight" type="range" min="100" max="2000" step="any"></label>
-<div class="control-break"></div>
-<label>Horizontal spacing <output id="spacing-x-value"></output><input id="spacing-x" type="range" data-unit="%" min="25" max="200" step="any"></label>
-<label>Vertical spacing <output id="spacing-y-value"></output><input id="spacing-y" type="range" data-unit="%" min="25" max="200" step="any"></label>
 </form>
-<p>100% preserves the base layout. Spacing adjusts motif centers and tile dimensions together, without resizing motifs. Smaller values can cause overlaps.</p>
+<p>Tile dimensions adjust spacing throughout the repeat while motif size stays unchanged. Smaller tiles can cause overlaps.</p>
 <form id="motif-controls">
 <label>Motif <select id="selected-motif"></select></label>
-<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" min="-3000" max="5000" step="any"></label>
-<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" min="-2000" max="3000" step="any"></label>
+<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" data-unit="%" min="-100" max="200" step="any"></label>
+<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" data-unit="%" min="-100" max="200" step="any"></label>
 <label>Drawing delay (seconds) <output id="motif-delay-value"></output><input id="motif-delay" type="range" min="0" max="60" step="any"></label>
 <label><span><input id="motif-invert" type="checkbox"> Invert motif</span></label>
 </form>
 <div class="toggles"><button id="add-motif" type="button">Add motif</button><button id="remove-motif" type="button">Remove motif</button></div>
-<p>Positions locate each motif’s center in native units before spacing is applied. Motifs wrap at tile boundaries. Select a motif, then adjust its position and inversion.</p>
+<p>Positions locate each motif’s center as percentages of the tile width and height (50% = halfway). Motifs wrap at tile boundaries. Select a motif, then adjust its position and inversion.</p>
 <p id="layout-error" role="status"></p>
 <div class="toggles">
   <label><input id="animate" type="checkbox"> Animate trails</label>

@@ -56,7 +56,6 @@ function update() {
     tileWidth: Number(get('tileWidth').value),
     tileHeight: Number(get('tileHeight').value),
     motifs: placements,
-    spacing: { x: Number(get('spacing-x').value) / 100, y: Number(get('spacing-y').value) / 100 },
   };
   const pauseBetweenDrawings = get('pause-trails').checked;
   get('motif-delay').disabled = !pauseBetweenDrawings;
@@ -135,8 +134,8 @@ function update() {
 
 function showSelectedMotif() {
   const motif = placements[Number(get('selected-motif').value)];
-  setSlider('motif-x', motif.x);
-  setSlider('motif-y', motif.y);
+  setSlider('motif-x', motif.x * 100);
+  setSlider('motif-y', motif.y * 100);
   get('motif-invert').checked = motif.rotation === 180;
   setSlider('motif-delay', motif.delay);
   get('remove-motif').disabled = placements.length === 1;
@@ -166,8 +165,6 @@ function reset() {
   randomPhases.checked = CONFIG.randomStartingPositions;
   setSlider('tileWidth', PATTERN.tileWidth);
   setSlider('tileHeight', PATTERN.tileHeight);
-  setSlider('spacing-x', PATTERN.spacing.x * 100);
-  setSlider('spacing-y', PATTERN.spacing.y * 100);
   placements = PATTERN.motifs.map(motif => ({ ...motif }));
   refreshMotifList();
   update();
@@ -186,7 +183,7 @@ get('selected-motif').addEventListener('change', showSelectedMotif);
 motifControls.addEventListener('input', event => {
   if (event.target.id === 'selected-motif' || !motifControls.reportValidity()) return;
   placements[Number(get('selected-motif').value)] = {
-    x: Number(get('motif-x').value), y: Number(get('motif-y').value),
+    x: Number(get('motif-x').value) / 100, y: Number(get('motif-y').value) / 100,
     rotation: get('motif-invert').checked ? 180 : 0,
     delay: Number(get('motif-delay').value),
   };
@@ -194,7 +191,7 @@ motifControls.addEventListener('input', event => {
   update();
 });
 get('add-motif').addEventListener('click', () => {
-  placements.push({ x: Number(get('tileWidth').value) / 2, y: Number(get('tileHeight').value) / 2, rotation: 0, delay: 0 });
+  placements.push({ x: 0.5, y: 0.5, rotation: 0, delay: 0 });
   refreshMotifList(placements.length - 1);
   update();
 });

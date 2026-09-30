@@ -1,7 +1,7 @@
 // Lengths use native motif units unless noted; duration uses seconds.
 export const CONFIG = {
-  patternOffset: { x: 0, y: 0 }, // Fixed tile fractions for consistent framing; null = random.
-  motifWidth: 360, // Displayed outline width in pixels; smaller screens crop the same pattern.
+  patternOffset: { x: 0, y: -0.15 }, // Fixed tile fractions for consistent framing; null = random.
+  motifWidth: 800, // Displayed outline width in pixels; smaller screens crop the same pattern.
   strokeWidth: 38,
   blur: 13,
   opacity: 0.55,
@@ -17,7 +17,7 @@ export const CONFIG = {
   pauseBetweenDrawings: true, // false = continuous movement; true uses each motif delay.
   loopDuration: 18, // Seconds per circuit, independent of pattern size.
   randomStartingPositions: true, // false starts every trail at position zero.
-  trailFraction: 0.72, // Visible fraction of each closed loop, including both ramps.
+  trailFraction: 0.35, // Visible fraction of each closed loop, including both ramps.
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
   headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.
   tailFadeLength: 160, // Tail opacity ramp length; 0 disables it.

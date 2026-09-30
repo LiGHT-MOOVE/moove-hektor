@@ -1,16 +1,25 @@
-import { CONFIG, PATTERN } from '../config.js';
 import { createScene } from '../scene.js';
 import { createSvg } from '../svg.js';
 import { initialize } from '../animation.js';
 import { updateConfigSource } from './config-source.js';
 
-let originalSource, sourceError;
+let originalSource, CONFIG, PATTERN;
 try {
   const response = await fetch('../config.js', { cache: 'no-store' });
   if (!response.ok) throw new Error(`Could not load config.js (${response.status})`);
   originalSource = await response.text();
+  // Evaluate the exact source used by the comment-preserving exporter.
+  const url = URL.createObjectURL(new Blob([originalSource], { type: 'text/javascript' }));
+  try {
+    ({ CONFIG, PATTERN } = await import(url));
+    if (!CONFIG || !PATTERN) throw new Error('config.js must export CONFIG and PATTERN');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 } catch (error) {
-  sourceError = error;
+  document.getElementById('layout-error').textContent = `Configuration unavailable: ${error.message}`;
+  for (const input of document.querySelectorAll('input, select, button')) input.disabled = true;
+  throw error;
 }
 
 const get = id => document.getElementById(id);
@@ -82,7 +91,6 @@ function update() {
     return;
   }
   try {
-    if (sourceError) throw sourceError;
     get('config-source').textContent = updateConfigSource(originalSource, {
       CONFIG: configChanges,
       PATTERN: placement,

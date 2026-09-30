@@ -54,6 +54,11 @@ rewritten and any comments inside it are retained immediately before it.
 Unsupported or ambiguous literal syntax disables copying with an error.
 Preview-only appearance overrides, preview mode, and seed 42 are not exported.
 The preview uses the same SVG source as the build and does not persist changes.
+Studio fetches `config.js` with `cache: 'no-store'` on each page load and imports
+that exact text through a temporary Blob module, so settings and exported comments
+always come from the same source. Reload after editing the file; Reset restores
+that page load's settings. Config must remain a self-contained module, and a
+restrictive content security policy must allow Blob module scripts for Studio.
 
 Each turn supplies its radius directly, e.g. `{ radius: 142, degrees: -90 }`.
 Positive turns are clockwise. Any positive finite radius is supported; the full

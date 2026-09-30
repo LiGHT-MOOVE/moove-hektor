@@ -9,7 +9,7 @@ export function createSvg(config, tile, script = "") {
   const padding = renderPadding(config);
   const region = `x="${-padding}" y="${-padding}" width="${tile.width + 2 * padding}" height="${tile.height + 2 * padding}"`;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="display:block" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="display:block;overflow:hidden" role="img" aria-labelledby="title desc">
   <title id="title">Moove — flowing motifs</title>
   <desc id="desc">A seamless tiled field of upright and inverted motifs with softly tapered moving trails.</desc>
   <defs>
@@ -42,7 +42,9 @@ export function createSvg(config, tile, script = "") {
     </pattern>
   </defs>
   <rect width="100%" height="100%" fill="url(#background)"/>
-  <rect id="field" width="100%" height="100%" fill="url(#motifs)"/>
+  <svg id="pattern-viewport" x="50%" y="50%" width="100%" height="100%" overflow="visible">
+    <rect id="field" x="-50%" y="-50%" width="100%" height="100%" fill="url(#motifs)"/>
+  </svg>
 ${script ? `<script><![CDATA[${script.replaceAll("]]>", "]]]]><![CDATA[>")}]]></script>` : ""}
 </svg>
 `;

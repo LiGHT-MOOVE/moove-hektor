@@ -78,13 +78,16 @@ Copy `motifWidth` into `config.js` and rebuild to save the scale.
 ## Repetition and screen size
 
 A native SVG `<pattern>` fills the viewport. `motifWidth` is the displayed outline
-width in pixels (default 360). Mobile crops a narrower portion of the same pattern;
+width in pixels (default 360). Mobile crops the center of the same pattern;
 it does not shrink motifs to fit. Stroke, blur, spacing, and shadow retain the same
 scale. Resizing only changes the crop and requires no resize observer.
 
 Desktop and mobile previews use the same logical pixel scale; the preview itself
 may be shrunk to fit the Studio. The default `patternOffset: { x: 0, y: 0 }` anchors
-both views to the same origin. Random placement remains optional. Random head
+both views to the same centered origin. A nested SVG at `x="50%" y="50%"`
+centers the pattern natively; its field extends back by half the viewport and the
+outer SVG clips the result. No resize handler or breakpoint is needed. The
+background gradient still spans each screen. Random placement remains optional. Random head
 positions can still differ between page loads unless `seed` is fixed. Tile
 inspection remains an unscaled 3 × 3 repeat.
 
@@ -100,7 +103,8 @@ gradient remains fixed across the screen rather than repeating per tile.
 Set `CONFIG.patternOffset` to `{ x: 0.25, y: 0.5 }` to shift the entire field
 by fractions of the repeat tile, or leave it `null` for seeded random placement.
 Positive values move right/down; negative values move left/up. Whole-tile shifts
-are equivalent. Offsets scale with `motifWidth` and do not change trail phases.
+are equivalent. Placement is relative to the screen center. Offsets scale with
+`motifWidth` and do not change trail phases.
 Studio exposes **Random placement** and horizontal/vertical percentage sliders;
 these switch to screen preview, while tile layout stays anchored. Studio uses
 seed 42 for a stable preview of random settings.

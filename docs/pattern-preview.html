@@ -75,7 +75,7 @@ button {
   border-radius: 10px;
   overflow: hidden;
 }
-#canvas svg {
+#canvas > svg {
   display: block;
   width: 100%;
   height: auto;
@@ -138,7 +138,7 @@ a {
 <label>Horizontal placement <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="any"></label>
 <label>Vertical placement <output id="offset-y-value"></output><input id="offset-y" type="range" data-unit="%" min="-100" max="100" step="any"></label>
 </form>
-<p>Placement is a percentage of one tile. Positive values move right/down. Whole-tile shifts repeat the same placement. Adjusting placement switches to screen preview; tile layout stays anchored.</p>
+<p>Placement is a percentage of one tile, relative to the screen center. Positive values move right/down. Whole-tile shifts repeat the same placement. Adjusting placement switches to screen preview; tile layout stays anchored.</p>
 
 <h2>config.js</h2>
 <p>Comments and untouched settings are preserved. Replace the contents of <code>config.js</code> with this complete module, then run <code>npm run build</code>. Preview mode, animation/effects toggles, and the preview seed are not exported; saved appearance and seed settings are preserved.</p>

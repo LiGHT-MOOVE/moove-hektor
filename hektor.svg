@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="display:block" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="display:block;overflow:hidden" role="img" aria-labelledby="title desc">
   <title id="title">Moove — flowing motifs</title>
   <desc id="desc">A seamless tiled field of upright and inverted motifs with softly tapered moving trails.</desc>
   <defs>
@@ -32,7 +32,9 @@
     </pattern>
   </defs>
   <rect width="100%" height="100%" fill="url(#background)"/>
-  <rect id="field" width="100%" height="100%" fill="url(#motifs)"/>
+  <svg id="pattern-viewport" x="50%" y="50%" width="100%" height="100%" overflow="visible">
+    <rect id="field" x="-50%" y="-50%" width="100%" height="100%" fill="url(#motifs)"/>
+  </svg>
 <script><![CDATA[const renderPadding = function renderPadding(config) {
   const shadow = config.shadowEnabled ? Math.max(Math.abs(config.shadowOffsetX), Math.abs(config.shadowOffsetY)) : 0;
   return config.strokeWidth / 2 + 4 * config.blur + shadow + 4;

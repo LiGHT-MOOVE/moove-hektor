@@ -121,7 +121,9 @@ function update() {
   get('canvas').replaceChildren(svg);
   dispose = initialize(config, pattern, svg, !animate.checked, scene);
   if (!screen) {
-    // Layout mode uses native tile coordinates without the fullscreen crop offset.
+    // Inspect native tile coordinates without screen centering or crop offsets.
+    attributes(svg.querySelector('#pattern-viewport'), { x: 0, y: 0 });
+    attributes(svg.querySelector('#field'), bounds);
     svg.querySelector('#motifs').removeAttribute('patternTransform');
     const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     attributes(outline, {

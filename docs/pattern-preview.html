@@ -100,8 +100,8 @@ a {
 <div id="canvas" aria-label="Nine repeated pattern tiles"></div>
 <h2>Pattern settings</h2>
 <form id="controls">
-<label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="any"></label>
-<label>Tile height <output id="tileHeight-value"></output><input id="tileHeight" type="range" min="100" max="2000" step="any"></label>
+<label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="1"></label>
+<label>Tile height <output id="tileHeight-value"></output><input id="tileHeight" type="range" min="100" max="2000" step="1"></label>
 </form>
 <p>Tile dimensions adjust spacing throughout the repeat while motif size stays unchanged. Smaller tiles can cause overlaps.</p>
 <form id="motif-controls">
@@ -126,7 +126,7 @@ a {
 <p>Trail length is a percentage of the motif perimeter, including the fading ends. Changing it enables animation; reduced motion still shows complete outlines.</p>
 <p>Each motif uses its own fixed drawing delay, before the first drawing and after its tail finishes. Disable pauses for continuous movement. Repeated tile copies share their motif’s timing.</p>
 <form id="preview-controls">
-<label>Motif width (pixels) <output id="motifWidth-value"></output><input id="motifWidth" type="range" data-unit=" px" min="100" max="1000" step="any"></label>
+<label>Motif width (pixels) <output id="motifWidth-value"></output><input id="motifWidth" type="range" data-unit=" px" min="100" max="1000" step="1"></label>
 <label>Preview mode <select id="preview-mode">
 <option value="layout">Tile layout (3 × 3)</option>
 <option value="desktop">Desktop (1440 × 900)</option>

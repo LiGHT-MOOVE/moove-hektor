@@ -33,12 +33,13 @@ function attributes(node, values) {
 
 function updateSliderLabels() {
   for (const input of document.querySelectorAll('input[type="range"]')) {
-    get(input.id + '-value').value = Number(input.value).toFixed(1).replace(/\.0$/, '') + (input.dataset.unit || '');
+    get(input.id + '-value').value = Number(input.value).toFixed(input.step === '1' ? 0 : 1).replace(/\.0$/, '') + (input.dataset.unit || '');
   }
 }
 
 function setSlider(id, value) {
   const input = get(id);
+  if (input.step === '1') value = Math.round(value);
   input.min = Math.min(Number(input.min), value);
   input.max = Math.max(Number(input.max), value);
   input.value = value;
@@ -153,9 +154,7 @@ function refreshMotifList(selected = 0) {
 function reset() {
   get('pause-trails').checked = CONFIG.pauseBetweenDrawings;
   setSlider('trail-length', CONFIG.trailFraction * 100);
-  motifWidthInput.min = Math.min(100, CONFIG.motifWidth);
-  motifWidthInput.max = Math.max(1000, CONFIG.motifWidth);
-  motifWidthInput.value = CONFIG.motifWidth;
+  setSlider('motifWidth', CONFIG.motifWidth);
   previewMode.value = 'layout';
   randomPlacement.checked = CONFIG.patternOffset == null;
   offsetInputs.forEach((input, i) => {

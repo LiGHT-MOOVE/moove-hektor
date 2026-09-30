@@ -106,9 +106,9 @@ a {
 <p>Tile dimensions adjust spacing throughout the repeat while motif size stays unchanged. Smaller tiles can cause overlaps.</p>
 <form id="motif-controls">
 <label>Motif <select id="selected-motif"></select></label>
-<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" data-unit="%" min="-100" max="200" step="any"></label>
-<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" data-unit="%" min="-100" max="200" step="any"></label>
-<label>Drawing delay (seconds) <output id="motif-delay-value"></output><input id="motif-delay" type="range" min="0" max="60" step="any"></label>
+<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" data-unit="%" min="-100" max="200" step="1"></label>
+<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" data-unit="%" min="-100" max="200" step="1"></label>
+<label>Drawing delay (seconds) <output id="motif-delay-value"></output><input id="motif-delay" type="range" min="0" max="60" step="1"></label>
 <label><span><input id="motif-invert" type="checkbox"> Invert motif</span></label>
 </form>
 <div class="toggles"><button id="add-motif" type="button">Add motif</button><button id="remove-motif" type="button">Remove motif</button></div>
@@ -122,7 +122,7 @@ a {
 </div>
 <p>Random starting positions gives each trail a seeded starting point. When disabled, all trails start at position zero on their motifs.</p>
 <div class="toggles"><label><input id="pause-trails" type="checkbox"> Pause between drawings</label></div>
-<label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="any"></label>
+<label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="1"></label>
 <p>Trail length is a percentage of the motif perimeter, including the fading ends. Changing it enables animation; reduced motion still shows complete outlines.</p>
 <p>Each motif uses its own fixed drawing delay, before the first drawing and after its tail finishes. Disable pauses for continuous movement. Repeated tile copies share their motif’s timing.</p>
 <form id="preview-controls">
@@ -135,8 +135,8 @@ a {
 </form>
 <div class="toggles"><label><input id="random-placement" type="checkbox"> Random placement</label></div>
 <form id="pattern-placement">
-<label>Horizontal placement <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="any"></label>
-<label>Vertical placement <output id="offset-y-value"></output><input id="offset-y" type="range" data-unit="%" min="-100" max="100" step="any"></label>
+<label>Horizontal placement <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="1"></label>
+<label>Vertical placement <output id="offset-y-value"></output><input id="offset-y" type="range" data-unit="%" min="-100" max="100" step="1"></label>
 </form>
 <p>Placement is a percentage of one tile, relative to the screen center. Positive values move right/down. Whole-tile shifts repeat the same placement. Adjusting placement switches to screen preview; tile layout stays anchored.</p>
 

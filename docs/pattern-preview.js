@@ -33,13 +33,13 @@ function attributes(node, values) {
 
 function updateSliderLabels() {
   for (const input of document.querySelectorAll('input[type="range"]')) {
-    get(input.id + '-value').value = Number(input.value).toFixed(input.step === '1' ? 0 : 1).replace(/\.0$/, '') + (input.dataset.unit || '');
+    get(input.id + '-value').value = Math.round(Number(input.value)) + (input.dataset.unit || '');
   }
 }
 
 function setSlider(id, value) {
   const input = get(id);
-  if (input.step === '1') value = Math.round(value);
+  value = Math.round(value);
   input.min = Math.min(Number(input.min), value);
   input.max = Math.max(Number(input.max), value);
   input.value = value;

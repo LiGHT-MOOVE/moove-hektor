@@ -1,13 +1,12 @@
 # Moove Hektor
 
-A standalone animated SVG built from a compact repeating tile. Two-radius closed
-motifs alternate upright and inverted, carrying soft moving trails. Inspired by
-**Hektor**, the project by **Jürg Lehni**. No runtime assets or dependencies.
+A standalone animated SVG of repeating motifs with soft moving trails. Inspired
+by **Hektor**, the project by **Jürg Lehni**. No runtime assets or dependencies.
 
 ## Build and embed
 
-Requires Node.js 18 or newer. Run `npm run build`, then open `hektor.svg` in a browser.
-Rebuild after changing source files or configuration.
+Requires Node.js 18 or newer. Run `pnpm run build` (or `npm run build`) to generate
+`hektor.svg`. Rebuild after changing configuration or source files.
 
 ```html
 <object type="image/svg+xml" data="/hektor.svg"
@@ -20,172 +19,67 @@ Give the object an explicit size. An `<img>` or CSS background does not execute
 embedded scripts. The site's content security policy must allow the embedding
 and script method.
 
-## Design the repeat
+## Use Studio
 
-Open [the pattern studio](docs/pattern-preview.html) through your local web server.
-It shows a highlighted source tile in a 3 × 3 repeat, initially as complete thin
-outlines. Adjust tile width/height, then select a motif to change its center position
-or rotation (0° or 180°). Add/remove motifs as needed; a tile needs at least one.
-Positions can extend outside the tile because the renderer wraps at its edges.
-All placement controls are below the visualization.
+1. Open [moove-hektor studio](docs/pattern-preview.html) through a local web server.
+2. Adjust tile dimensions for spacing, motif positions for arrangement, and motif width for displayed size. Add, remove, or invert motifs as needed.
+3. Inspect repetition and overlaps in **Tile layout**, then check framing in **Desktop** and **Mobile**. Enable **Animate trails** and **Blur and shadow** to preview the effect.
+4. Choose **Copy config.js**, replace the project's `config.js` with the copied text, and rebuild. Comments and untouched settings are preserved.
+5. Reload Studio after editing the file externally. **Reset** restores the settings loaded when the page opened.
 
-Studio uses sliders with live values for tile dimensions and motif positions,
-plus an inversion checkbox. There are no image-specific presets. Reset restores
-the saved configuration. The source remains one
-`PATTERN` object in `config.js`: `turns`, `tileWidth`, `tileHeight`, and a `motifs`
-array of `{ x, y, rotation, delay }` placements. Motif count is no longer hardcoded.
+Edits are not saved automatically. **Fullscreen animation** opens the last built
+SVG. Preview mode and the animation/effects toggles are not exported.
 
-**Tile width** and **Tile height** control repeat spacing without resizing motifs.
-Motif centers are tile fractions: `x: 0.5` is halfway across the tile and `y: 1`
-is its bottom edge. Studio displays these positions as percentages. Resizing a
-tile moves its motifs proportionally, preserving the arrangement across repeat
-boundaries. Positions may be negative or greater than 1; they wrap naturally.
-Smaller tiles can cause overlap. Tile fractions are independent of viewport size,
-so mobile still crops the same-sized pattern.
-
-For older configurations using native-unit positions and `spacing`, divide each
-motif's x/y by the old tile width/height, then multiply the tile dimensions by
-spacing.x/y and remove `spacing`. This preserves the original rendered layout.
-
-Use **Copy config.js** to replace the complete module and rebuild. Original
-comments, unedited values, and the turn sequence are preserved. Editing a motif
-updates its individual literals. When adding/removing motifs, the array is
-rewritten and any comments inside it are retained immediately before it.
-Unsupported or ambiguous literal syntax disables copying with an error.
-Preview-only appearance overrides, preview mode, and seed 42 are not exported.
-The preview uses the same SVG source as the build and does not persist changes.
-Studio fetches `config.js` with `cache: 'no-store'` on each page load and imports
-that exact text through a temporary Blob module, so settings and exported comments
-always come from the same source. Reload after editing the file; Reset restores
-that page load's settings. Config must remain a self-contained module, and a
-restrictive content security policy must allow Blob module scripts for Studio.
-
-Each turn supplies its radius directly, e.g. `{ radius: 142, degrees: -90 }`.
-Positive turns are clockwise. Any positive finite radius is supported; the full
-sequence must close in position and tangent. The default outline uses radii 96
-and 142; it is 1144 × 430 native units and about 3594 units long.
-
-The saved four-motif layout retains its original positions, orientations, and
-seeded phases. Its sampled periodic-neighbor centerline clearance is about 73
-native units, versus a 38-unit stroke. Blur/shadow halos can blend. New placements
-can overlap; check complete outlines in the 3 × 3 preview. There is no runtime
-collision detection or packing solver.
-
-The [closed outline](docs/closed-motif.svg) and [static repeat](docs/tile-map.svg)
-are reference snapshots, not regenerated by the build. Use Studio for current settings.
-
-Studio exposes **Pattern scale (`motifWidth`)** with desktop (1440 × 900) and
-mobile (390 × 844) screen previews and a calculated tile-density readout.
-Moving the scale slider switches from tile layout to screen preview. Screen
-previews may shrink to fit the page; their logical dimensions stay fixed.
-Copy `motifWidth` into `config.js` and rebuild to save the scale.
-
-## Repetition and screen size
-
-A native SVG `<pattern>` fills the viewport. `motifWidth` is the displayed outline
-width in pixels (default 360). Mobile crops the center of the same pattern;
-it does not shrink motifs to fit. Stroke, blur, spacing, and shadow retain the same
-scale. Resizing only changes the crop and requires no resize observer.
-
-Desktop and mobile previews use the same logical pixel scale; the preview itself
-may be shrunk to fit the Studio. The default `patternOffset: { x: 0, y: 0 }` anchors
-both views to the same centered origin. A nested SVG at `x="50%" y="50%"`
-centers the pattern natively; its field extends back by half the viewport and the
-outer SVG clips the result. No resize handler or breakpoint is needed. The
-background gradient still spans each screen. Random placement remains optional. Random head
-positions can still differ between page loads unless `seed` is fixed. Tile
-inspection remains an unscaled 3 × 3 repeat.
-
-Wrapping now happens at **tile boundaries, not opposite screen edges**. A fragment
-leaving a tile continues in the adjacent tile with the same head phase and masks.
-An arbitrary screen crop does not promise that its opposite edges match.
-
-The renderer supplies neighboring fragments beyond the tile by the effect padding.
-Masking and blur happen before the native pattern clips and repeats the tile,
-keeping strokes and effects continuous across its seams and corners. The background
-gradient remains fixed across the screen rather than repeating per tile.
-
-Set `CONFIG.patternOffset` to `{ x: 0.25, y: 0.5 }` to shift the entire field
-by fractions of the repeat tile, or leave it `null` for seeded random placement.
-Positive values move right/down; negative values move left/up. Whole-tile shifts
-are equivalent. Placement is relative to the screen center. Offsets scale with
-`motifWidth` and do not change trail phases.
-Studio exposes **Random placement** and horizontal/vertical percentage sliders;
-these switch to screen preview, while tile layout stays anchored. Studio uses
-seed 42 for a stable preview of random settings.
-
-## Animation
-
-`pauseBetweenDrawings: true` makes each motif use its own `delay` in seconds,
-before the first drawing and between completed drawing cycles. The head draws
-one circuit, then the tail finishes exiting. At the default duration/fraction,
-drawing and draining take 18 × 1.72 = 30.96 seconds; the motif's fixed delay is
-added to that duration. Different delays create different repeating periods.
-A delay of zero draws/drains immediately again. Set `pauseBetweenDrawings: false`
-for continuous movement, ignoring delays. Studio exposes a per-motif delay slider
-and the global pause toggle. Defaults stagger motifs by 0, 3, 6 and 9 seconds.
-Static inspection and reduced motion still show complete outlines.
-
-`CONFIG.randomStartingPositions` controls where the drawing heads start.
-With `true` (the default), each gets a seeded random position along its loop.
-With `false`, all start at position zero on their respective motifs. Rotation
-still applies, so inverted motifs retain their orientation. Pattern placement
-is independent of these starting positions.
-
-Studio exposes **Random starting positions**; changing it restarts the preview
-with animation enabled. Reset restores saved settings and switches animation
-and effects off.
-
-All repetitions of a motif share its phase, so the animation itself repeats spatially. Bounded per-motif clocks drive drawing/pause cycles; a shared modulo clock
-drives continuous mode. `loopDuration` sets seconds per circuit. No geometry
-history, route search, collision state, or automatic restart is retained.
-
-Studio’s **Trail length** slider sets `trailFraction` as a percentage of each
-perimeter, including the fading ends (default 72%). Changing it enables animation;
-Reset restores the saved value and Copy config.js preserves it. Longer trails also
-take longer to drain before the next pause. Distance windows
-crossing the loop seam are split smoothly. Two fixed pools of 32 mask bands soften
-the head and tail. All motifs share the paths, masks, and one Gaussian blur;
-the optional shadow reuses the blurred alpha. Native repetition does not add DOM
-nodes for additional screen tiles. Rendering cost can still increase with screen
-area and filters; native repetition is not a promise of GPU caching.
-
-Reduced motion shows complete static outlines without scheduling frames.
-Preference changes preserve phase. Frame gaps are capped at 50 ms, and listeners
-and animation frames are released on disposal. A seeded shared pattern offset
-varies the crop on each load without altering packing.
+Mobile crops the pattern's center at the same motif scale as desktop. Repeated
+copies of each motif share its animation timing. Reduced-motion preferences show
+complete static outlines.
 
 ## Configuration
 
-`config.js` centralizes all settings in two objects: `PATTERN` for geometry and
-placement, and `CONFIG` for display and animation. The `CONFIG` settings are:
+All settings live in `config.js`: `PATTERN` defines geometry and layout; `CONFIG`
+defines appearance and animation. Keep it a self-contained module of literal
+settings for Studio loading and export.
 
-| Setting | Meaning |
+`PATTERN.tileWidth` and `tileHeight` control spacing in native motif units.
+Motif placements use `{ x, y, rotation, delay }`: x/y are tile fractions
+(`0.5` = halfway), rotation is 0 or 180 degrees, and delay is seconds before the
+first drawing and between completed cycles. Positions outside the tile wrap.
+Smaller tiles can cause overlaps.
+
+For custom outlines, `turns` contains `{ radius, degrees }` entries. Radii must be
+positive; positive angles turn clockwise. The outline must close in position
+and tangent.
+
+| CONFIG setting | Purpose |
 | --- | --- |
-| `motifWidth` | Displayed outline width in pixels |
-| `patternOffset` | Null for seeded random placement, or `{ x, y }` tile fractions |
-| `loopDuration` | Seconds per complete circuit |
-| `pauseBetweenDrawings` | Draw/drain cycles with per-motif delays; false enables continuous movement |
-| `randomStartingPositions` | Seeded random trail starts when true; all start at zero when false |
-| `trailFraction` | Visible perimeter fraction, between 0 and 1 |
-| `headFadeLength`, `tailFadeLength` | Native opacity-ramp lengths; either length may be zero |
-| `headFadePower` | Leading taper exponent |
-| `strokeWidth`, `blur`, `opacity`, `color` | Appearance; native lengths scale with the pattern |
-| `shadowEnabled`, `shadowColor`, `shadowOpacity` | Optional shadow appearance |
-| `shadowOffsetX`, `shadowOffsetY` | Native shadow displacement |
-| `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Screen-wide gradient |
-| `seed` | Null for fresh offset/phases, or an integer for reproducibility |
+| `motifWidth` | Displayed motif width in pixels |
+| `patternOffset` | `{ x, y }` tile fractions relative to screen center; positive moves right/down; `null` randomizes placement |
+| `loopDuration` | Seconds per circuit |
+| `pauseBetweenDrawings` | Use motif delays when true; continuous movement, ignoring delays, when false |
+| `randomStartingPositions` | Random trail starting points when true; start at zero when false |
+| `trailFraction` | Trail length as a fraction of the perimeter, including fades; greater than 0 and less than 1 |
+| `headFadeLength`, `tailFadeLength`, `headFadePower` | Fade lengths and head taper; zero length disables that fade |
+| `strokeWidth`, `blur`, `opacity`, `color` | Trail appearance |
+| `shadowEnabled`, `shadowColor`, `shadowOpacity`, `shadowOffsetX`, `shadowOffsetY` | Optional shadow |
+| `backgroundTop`, `backgroundMiddle`, `backgroundBottom` | Background gradient colors |
+| `seed` | Integer for reproducible randomness; `null` for fresh randomness on load |
+
+Stroke, blur, fade lengths, and shadow offsets use native motif units and scale
+with `motifWidth`. Studio shows fractions as percentages and uses whole-number
+controls. A restrictive content security policy must allow Blob module scripts
+for Studio to load configuration.
 
 ## Source structure
 
-- `config.js`: all settings, grouped into `PATTERN` (geometry/placement) and `CONFIG` (display/timing).
-- `motif.js`: static arc geometry, bounds, and closure validation.
-- `tile.js`: configured motif transforms, phases, and shared offset.
-- `geometry.js`: circular point evaluation and distance slicing.
-- `repeats.js`: neighboring tile translations for seam-safe fragments.
-- `renderer.js`: rotated loop intervals and padded tile fragments.
-- `animation.js`: one tile's distance windows and shared masks.
-- `scene.js`: shared settings validation and prepared motif/tile geometry.
+- `config.js`: layout, appearance, and animation settings.
+- `motif.js`: closed motif geometry and bounds.
+- `geometry.js`: circular arc point calculations.
+- `tile.js`: tile-relative placements and seeded starting positions.
+- `scene.js`: configuration validation and scene preparation.
+- `repeats.js`: neighboring tile offsets for wrapping.
+- `renderer.js`: visible path sections and wrapped fragments.
+- `animation.js`: trail timing, fading, and animation lifecycle.
 - `svg.js`: shared SVG markup for the build and Studio.
-- `docs/pattern-preview.js`: Studio controls and preview lifecycle.
-- `build.mjs`: embed the runtime and native pattern into `hektor.svg`.
+- `docs/pattern-preview.html` / `docs/pattern-preview.js`: Studio interface and preview controls.
+- `docs/config-source.js`: comment-preserving configuration export.
+- `build.mjs`: generate the standalone `hektor.svg` with embedded runtime.

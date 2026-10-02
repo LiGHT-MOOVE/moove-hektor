@@ -15,8 +15,6 @@ export function createScene(config, pattern) {
   if (!Number.isFinite(config.trailFraction) || config.trailFraction <= 0 || config.trailFraction >= 1) {
     throw new Error('Trail fraction must be between 0 and 1, exclusive');
   }
-  if (!['sequence', 'multiple'].includes(config.playback)) throw new Error('Invalid playback mode');
-  if (!['shuffle', 'rows', 'columns'].includes(config.order)) throw new Error('Invalid drawing order');
   if (config.shadowEnabled &&
       (![config.shadowOpacity, config.shadowOffsetX, config.shadowOffsetY].every(Number.isFinite) ||
        config.shadowOpacity < 0 || config.shadowOpacity > 1)) {

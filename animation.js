@@ -1,6 +1,6 @@
-import { createScene } from './scene.js?v=relative-blur';
+import { createScene } from './scene.js?v=trails-only';
 import { createPathRenderer, renderPadding } from './renderer.js?v=relative-blur';
-import { createChoreography } from './choreography.js?v=relative-blur';
+import { createChoreography } from './choreography.js?v=trails-only';
 
 /** Animate visible instances; use the native repeat for static inspection. */
 export function initialize(config, pattern, root = document.documentElement, still = false, scene = createScene(config, pattern), viewport = null) {

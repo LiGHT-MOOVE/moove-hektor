@@ -16,11 +16,9 @@ export const CONFIG = {
   backgroundTop: "#f5fcff",
   backgroundMiddle: "#e3f2ff",
   backgroundBottom: "#8ac4ff",
-  playback: "multiple", // sequence = draw, drain, pause, move on; multiple = loop all repeated motifs.
-  order: "shuffle", // shuffle, rows, or columns; used by sequence playback.
-  pauseDuration: 0, // Seconds between trails, after the tail disappears.
+  pauseDuration: 0, // Seconds after the tail disappears; per motif.
   loopDuration: 18, // Seconds per circuit, independent of pattern size.
-  randomStartingPositions: true, // false starts at zero; true randomizes each Sequence appearance or each repeated motif.
+  randomStartingPositions: true, // false starts at zero; true randomizes the starting point of each repeated motif.
   trailFraction: 0.35, // Visible fraction of each closed loop, including both ramps.
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
   headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.

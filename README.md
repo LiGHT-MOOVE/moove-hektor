@@ -40,9 +40,9 @@ The local server enables saving and disables browser caching.
 | Pattern position | Random placement and horizontal / vertical offsets |
 | Motifs | Select, add, remove, position, and invert motifs |
 | Appearance | Trail color, stroke width, blur, shadow, and background gradient |
-| Animation | Playback, circuit duration, trail length, random starts, order, and pause |
+| Animation | Circuit duration, trail length, random starts, and pause |
 
-Studio opens in **Desktop** with **Animate trails** enabled. Playback and other
+Studio opens in **Desktop** with **Animate trails** enabled. Animation and other
 design settings come from `config.js`.
 
 - **Save** writes `config.js`, preserves comments, and rebuilds `hektor.svg`.
@@ -51,14 +51,15 @@ design settings come from `config.js`.
 - Reload after editing `config.js` externally; Save rejects stale settings.
 - Preview mode and Animate trails are not saved.
 
-**Multiple trails** loops intersecting motif copies independently. **Sequence**
-draws one motif at a time; Order and Pause apply only to this mode. A zero pause
-removes the wait after the tail disappears. Random starts can be offscreen.
+Each intersecting motif copy independently draws a circuit, lets its tail disappear,
+and pauses. Timing is staggered; increasing Pause makes fewer trails active on
+average. Zero pause starts the next drawing immediately after draining. Random
+starting positions change where drawing begins on the outline, independently of timing.
 
 **Mobile** crops the center of the desktop layout at the same motif scale.
 **Intersect viewport** outlines the 1440 × 900 desktop viewport in blue and reveals
 its surroundings. Animation selects only motif copies whose bounding boxes intersect
-that viewport, including partial motifs, in both modes. Disable Animate trails
+that viewport, including partial motifs, while fully offscreen copies are excluded. Disable Animate trails
 to inspect the complete pattern. Reduced motion also shows the static pattern.
 
 ## Configuration
@@ -81,9 +82,7 @@ and tangent.
 | `motifWidth` | Displayed motif width in pixels |
 | `patternOffset` | `{ x, y }` tile fractions relative to screen center; positive moves right/down; `null` randomizes placement |
 | `loopDuration` | Seconds per circuit |
-| `playback` | `sequence` for successive appearances; `multiple` to loop all motifs |
-| `order` | `shuffle`, `rows`, or `columns` for sequence playback |
-| `pauseDuration` | Seconds after a trail disappears before the next starts |
+| `pauseDuration` | Seconds after a trail disappears; per motif |
 | `randomStartingPositions` | Random starting point when true; start at zero when false |
 | `trailFraction` | Trail length as a fraction of the perimeter, including fades; greater than 0 and less than 1 |
 | `headFadeLength`, `tailFadeLength`, `headFadePower` | Fade lengths and head taper; zero length disables that fade |
@@ -107,7 +106,7 @@ for Studio to load configuration.
 - `scene.js`: configuration validation and scene preparation.
 - `repeats.js`: neighboring tile offsets for wrapping.
 - `renderer.js`: visible path sections and wrapped fragments.
-- `choreography.js`: visible candidates, drawing order, and playback timing.
+- `choreography.js`: visible candidates and staggered trail timing.
 - `animation.js`: trail rendering, fading, viewport updates, and lifecycle.
 - `svg.js`: shared SVG markup for the build and Studio.
 - `docs/studio.html` / `docs/studio.js`: Studio interface and preview controls.

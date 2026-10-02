@@ -159,14 +159,12 @@ a {
 <section aria-labelledby="animation-heading">
 <h2 id="animation-heading">animation</h2>
 <form id="animation-controls">
-<label>Playback <select id="playback"><option value="sequence">Sequence</option><option value="multiple">Multiple trails</option></select></label>
 <label>Circuit duration (seconds) <output id="loop-duration-value"></output><input id="loop-duration" type="range" min="1" max="60" step="1"></label>
 <label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="1"></label>
 <label><input id="random-phases" type="checkbox"> Random starting positions</label>
-<label>Order <select id="order"><option value="shuffle">Shuffle</option><option value="rows">Rows</option><option value="columns">Columns</option></select></label>
 <label>Pause between trails (seconds) <output id="pause-duration-value"></output><input id="pause-duration" type="range" min="0" max="30" step="1"></label>
 </form>
 </section>
 </main>
-<script type="module" src="./studio.js?v=viewport-preview"></script>
+<script type="module" src="./studio.js?v=trails-only"></script>
 </html>

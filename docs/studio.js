@@ -1,6 +1,6 @@
 import { createScene } from '../scene.js?v=relative-blur';
 import { createSvg } from '../svg.js?v=relative-blur';
-import { initialize } from '../animation.js?v=relative-blur';
+import { initialize } from '../animation.js?v=viewport-preview';
 
 let originalSource, CONFIG, PATTERN;
 try {
@@ -95,31 +95,41 @@ function update() {
   settingsToSave = { config: savedConfig, pattern };
   get('save').disabled = saving;
   const config = { ...savedConfig, seed: 42 };
-  const { width, height } = scene.tile;
   const template = new DOMParser().parseFromString(createSvg(config, scene.tile), 'image/svg+xml');
   const svg = document.importNode(template.documentElement, true);
-  const screen = screens[previewMode.value];
-  const bounds = screen
-    ? { x: 0, y: 0, width: screen[0], height: screen[1] }
-    : { x: -width, y: -height, width: width * 3, height: height * 3 };
+  const inspect = previewMode.value === 'intersect';
+  const [width, height] = screens[previewMode.value] || screens.desktop;
+  const margin = inspect ? 0.15 : 0;
+  const bounds = { x: -width * margin, y: -height * margin,
+    width: width * (1 + 2 * margin), height: height * (1 + 2 * margin) };
   attributes(svg, { viewBox: `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}` });
   get('canvas').style.setProperty('--ratio', String(bounds.width / bounds.height));
-  get('canvas').setAttribute('aria-label', screen ? `${previewMode.value} screen preview` : 'Nine repeated pattern tiles');
+  get('canvas').setAttribute('aria-label', inspect
+    ? 'Desktop visibility preview: intersecting motifs inside the blue viewport outline'
+    : `${previewMode.value} screen preview`);
   for (const rect of svg.querySelectorAll(':scope > rect')) attributes(rect, bounds);
+  // Keep the desktop origin and selection bounds unchanged when revealing its surroundings.
+  attributes(svg.querySelector('#pattern-viewport'), { x: width / 2, y: height / 2 });
+  attributes(svg.querySelector('#field'), {
+    x: bounds.x - width / 2, y: bounds.y - height / 2, width: bounds.width, height: bounds.height,
+  });
 
   dispose?.();
   get('canvas').replaceChildren(svg);
-  dispose = initialize(config, pattern, svg, !animate.checked, scene, screen ? { width: screen[0], height: screen[1] } : { nativeBounds: { x: 0, y: 0, width, height } });
-  if (!screen) {
-    // Inspect native tile coordinates without screen centering or crop offsets.
-    attributes(svg.querySelector('#pattern-viewport'), { x: 0, y: 0 });
-    attributes(svg.querySelector('#field'), bounds);
+  dispose = initialize(config, pattern, svg, !animate.checked, scene, { width, height });
+  if (inspect) {
+    const surround = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    attributes(surround, {
+      d: `M ${bounds.x} ${bounds.y} h ${bounds.width} v ${bounds.height} h ${-bounds.width} Z M 0 0 h ${width} v ${height} H 0 Z`,
+      fill: '#1b3045', 'fill-opacity': 0.12, 'fill-rule': 'evenodd', 'pointer-events': 'none',
+    });
     const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     attributes(outline, {
       x: 0, y: 0, width, height, fill: 'none', stroke: '#287be0',
-      'stroke-width': 8, 'stroke-dasharray': '24 16',
+      'stroke-width': 1.5, 'stroke-dasharray': '6 4', 'vector-effect': 'non-scaling-stroke',
+      'pointer-events': 'none',
     });
-    svg.appendChild(outline);
+    svg.append(surround, outline);
   }
 }
 
@@ -199,13 +209,9 @@ for (const form of document.querySelectorAll('form')) {
 }
 effectKeys.forEach(key => get(key).addEventListener('change', update));
 animate.addEventListener('change', update);
-function updateScreenPreview() {
-  if (previewMode.value === 'layout') previewMode.value = 'desktop';
-  update();
-}
-motifWidthInput.addEventListener('input', updateScreenPreview);
-offsetInputs.forEach(input => input.addEventListener('input', updateScreenPreview));
-randomPlacement.addEventListener('change', updateScreenPreview);
+motifWidthInput.addEventListener('input', update);
+offsetInputs.forEach(input => input.addEventListener('input', update));
+randomPlacement.addEventListener('change', update);
 previewMode.addEventListener('change', update);
 get('reset').addEventListener('click', reset);
 get('save').addEventListener('click', async () => {

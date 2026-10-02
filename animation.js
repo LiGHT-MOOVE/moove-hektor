@@ -19,10 +19,8 @@ export function initialize(config, pattern, root = document.documentElement, sti
   const activeLayer = get('active-trail');
   const padding = renderPadding(config);
   let bounds;
-  // Studio tile inspection supplies native bounds; screen previews use pixel framing.
-  const nativeBounds = viewport?.nativeBounds;
-  const scale = nativeBounds ? 1 : config.motifWidth / motif.width;
-  const offset = nativeBounds ? { x: 0, y: 0 } : tile.offset;
+  const scale = config.motifWidth / motif.width;
+  const offset = tile.offset;
   patternNode.setAttribute('patternTransform', `matrix(${scale} 0 0 ${scale} ${offset.x * scale} ${offset.y * scale})`);
   activeLayer.setAttribute('transform', patternNode.getAttribute('patternTransform'));
   const isStatic = () => still || preference.matches;
@@ -49,10 +47,10 @@ export function initialize(config, pattern, root = document.documentElement, sti
     }
   }
   function updateViewport() {
-    const width = nativeBounds?.width ?? viewport?.width ?? root.clientWidth;
-    const height = nativeBounds?.height ?? viewport?.height ?? root.clientHeight;
+    const width = viewport?.width ?? root.clientWidth;
+    const height = viewport?.height ?? root.clientHeight;
     if (!(width > 0 && height > 0)) return;
-    bounds = nativeBounds ?? { x: -width / (2 * scale) - tile.offset.x, y: -height / (2 * scale) - tile.offset.y,
+    bounds = { x: -width / (2 * scale) - tile.offset.x, y: -height / (2 * scale) - tile.offset.y,
       width: width / scale, height: height / scale };
     choreography.setViewport(bounds);
     configureLayer();

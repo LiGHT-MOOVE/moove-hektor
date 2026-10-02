@@ -35,7 +35,7 @@ The local server enables saving and disables browser caching.
 
 | Section | Controls |
 | --- | --- |
-| Sticky preview toolbar | Desktop / Mobile / Tile layout, Animate trails, Open saved SVG, Reset, Save |
+| Sticky preview toolbar | Desktop / Mobile / Intersect viewport, Animate trails, Open saved SVG, Reset, Save |
 | Pattern | Motif width and tile dimensions |
 | Pattern position | Random placement and horizontal / vertical offsets |
 | Motifs | Select, add, remove, position, and invert motifs |
@@ -56,8 +56,9 @@ draws one motif at a time; Order and Pause apply only to this mode. A zero pause
 removes the wait after the tail disappears. Random starts can be offscreen.
 
 **Mobile** crops the center of the desktop layout at the same motif scale.
-**Tile layout** shows a 3 × 3 repeat; animation selects motifs whose bounding boxes
-intersect the blue rectangle, including partial motifs. Disable Animate trails
+**Intersect viewport** outlines the 1440 × 900 desktop viewport in blue and reveals
+its surroundings. Animation selects only motif copies whose bounding boxes intersect
+that viewport, including partial motifs, in both modes. Disable Animate trails
 to inspect the complete pattern. Reduced motion also shows the static pattern.
 
 ## Configuration

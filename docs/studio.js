@@ -1,6 +1,6 @@
-import { createScene } from '../scene.js?v=stagger-modes';
+import { createScene } from '../scene.js?v=per-draw-phase';
 import { createSvg } from '../svg.js?v=relative-blur';
-import { initialize } from '../animation.js?v=stagger-modes';
+import { initialize } from '../animation.js?v=per-draw-phase';
 
 let originalSource, CONFIG, PATTERN;
 try {
@@ -67,6 +67,7 @@ function update() {
     tileHeight: Number(get('tileHeight').value),
     motifs: placements,
   };
+  get('draw-duration').disabled = Number(get('pause-duration').value) === 0;
   const randomStartingPositions = randomPhases.checked;
   const motifWidth = Number(motifWidthInput.value);
   offsetInputs.forEach(input => { input.disabled = randomPlacement.checked; });
@@ -79,6 +80,7 @@ function update() {
   const configChanges = { ...Object.fromEntries(effectKeys.map(key => [key, get(key).checked])), motifWidth, patternOffset, randomStartingPositions,
     color: get('trail-color').value, strokeWidth: Number(get('stroke-width').value),
     staggerMode: get('stagger-mode').value, pauseDuration: Number(get('pause-duration').value),
+    drawDuration: Number(get('draw-duration').value),
     loopDuration: Number(get('loop-duration').value),
     trailFraction: Number(get('trail-length').value) / 100 };
   const savedConfig = { ...CONFIG, ...configChanges };
@@ -151,6 +153,7 @@ function reset() {
   setSlider('stroke-width', CONFIG.strokeWidth);
   get('stagger-mode').value = CONFIG.staggerMode;
   setSlider('pause-duration', CONFIG.pauseDuration);
+  setSlider('draw-duration', CONFIG.drawDuration);
   setSlider('loop-duration', CONFIG.loopDuration);
   setSlider('trail-length', CONFIG.trailFraction * 100);
   setSlider('motifWidth', CONFIG.motifWidth);
@@ -175,7 +178,7 @@ function updateStartingPositions() {
   update();
 }
 
-for (const id of ['stagger-mode', 'random-phases', 'loop-duration', 'pause-duration', 'trail-length']) {
+for (const id of ['stagger-mode', 'random-phases', 'draw-duration', 'loop-duration', 'pause-duration', 'trail-length']) {
   get(id).addEventListener('input', updateStartingPositions);
 }
 for (const id of ['tileWidth', 'tileHeight', 'trail-color', 'stroke-width']) {

@@ -17,9 +17,10 @@ export const CONFIG = {
   backgroundMiddle: "#e3f2ff",
   backgroundBottom: "#8ac4ff",
   staggerMode: "random", // random, x (columns left to right), or y (rows top to bottom).
-  pauseDuration: 0, // Seconds after the tail disappears; per motif.
+  pauseDuration: 0, // Seconds after the tail disappears; 0 loops continuously.
+  drawDuration: 18, // Seconds the head moves before draining; ignored when pause is 0.
   loopDuration: 18, // Seconds per circuit, independent of pattern size.
-  randomStartingPositions: true, // false starts at zero; true randomizes the starting point of each repeated motif.
+  randomStartingPositions: true, // false starts at zero; true randomizes each draw; continuous loops keep their initial offset.
   trailFraction: 0.35, // Visible fraction of each closed loop, including both ramps.
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
   headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.

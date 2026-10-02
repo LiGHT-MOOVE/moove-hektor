@@ -40,7 +40,7 @@ The local server enables saving and disables browser caching.
 | Pattern position | Random placement and horizontal / vertical offsets |
 | Motifs | Select, add, remove, position, and invert motifs |
 | Appearance | Trail color, stroke width, blur, shadow, and background gradient |
-| Animation | Staggering, circuit duration, trail length, random starts, and pause |
+| Animation | Staggering, circuit duration, drawing duration, trail length, random starts, and pause |
 
 Studio opens in **Desktop** with **Animate trails** enabled. Animation and other
 design settings come from `config.js`.
@@ -51,13 +51,14 @@ design settings come from `config.js`.
 - Reload after editing `config.js` externally; Save rejects stale settings.
 - Preview mode and Animate trails are not saved.
 
-Each intersecting motif copy independently draws a circuit, lets its tail disappear,
-and pauses. Staggering can be random, left-to-right by column (Scan X), or
-top-to-bottom by row (Scan Y). Copies at the same axis position start together;
-scan groups are evenly spaced over the cycle and regroup when the viewport changes.
-As with random staggering, the animation starts with cycles already in progress; increasing Pause makes fewer trails active on
-average. Zero pause starts the next drawing immediately after draining. Random
-starting positions change where drawing begins on the outline, independently of timing.
+With **Pause = 0**, trails loop continuously. With a positive pause, each head
+moves for **Drawing duration**, lets its tail disappear, then pauses. Circuit
+duration controls speed independently; drawing can stop anywhere along the outline.
+Staggering is random, left-to-right by column (Scan X), or top-to-bottom by row
+(Scan Y). Scan groups share timing and regroup when the viewport changes.
+Animations start with cycles already in progress. Random starting positions
+choose a new outline starting point for each draw, independently of timing.
+Continuous loops keep their initial offset to avoid jumps.
 
 **Mobile** crops the center of the desktop layout at the same motif scale.
 **Intersect viewport** outlines the 1440 × 900 desktop viewport in blue and reveals
@@ -86,8 +87,9 @@ and tangent.
 | `patternOffset` | `{ x, y }` tile fractions relative to screen center; positive moves right/down; `null` randomizes placement |
 | `loopDuration` | Seconds per circuit |
 | `staggerMode` | `random`, `x` (columns), or `y` (rows); independent of outline starting positions |
-| `pauseDuration` | Seconds after a trail disappears; per motif |
-| `randomStartingPositions` | Random starting point when true; start at zero when false |
+| `pauseDuration` | Seconds after a trail disappears; 0 loops continuously |
+| `drawDuration` | Seconds of head movement before draining; ignored when pause is 0 |
+| `randomStartingPositions` | New starting point per draw; fixed initial offset for continuous loops; zero when false |
 | `trailFraction` | Trail length as a fraction of the perimeter, including fades; greater than 0 and less than 1 |
 | `headFadeLength`, `tailFadeLength`, `headFadePower` | Fade lengths and head taper; zero length disables that fade |
 | `blurEnabled`, `shadowEnabled`, `gradientEnabled` | Independent effect toggles; disabling the gradient uses `backgroundTop` as a solid color |

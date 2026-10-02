@@ -3,7 +3,7 @@ import { createTile } from './tile.js?v=independent-effects';
 
 /** Validate settings and prepare the geometry once for each animation. */
 export function createScene(config, pattern) {
-  for (const key of ['motifWidth', 'strokeWidth', 'loopDuration', 'headFadePower']) {
+  for (const key of ['motifWidth', 'strokeWidth', 'loopDuration', 'drawDuration', 'headFadePower']) {
     if (!Number.isFinite(config[key]) || config[key] <= 0) throw new Error(`${key} must be positive`);
   }
   for (const key of ['blurRatio', 'headFadeLength', 'tailFadeLength', 'pauseDuration']) {

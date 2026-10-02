@@ -12,8 +12,11 @@ export function createChoreography(config, motif, tile, seed) {
     return ((hash ^ hash >>> 15) >>> 0) / 4294967296;
   }
   let candidates = [], time = 0;
-  const duration = config.loopDuration * (1 + config.trailFraction);
-  const cycle = duration + config.pauseDuration;
+  const continuous = config.pauseDuration === 0;
+  const speed = motif.length / config.loopDuration;
+  const span = motif.length * config.trailFraction;
+  const duration = config.drawDuration + config.loopDuration * config.trailFraction;
+  const cycle = continuous ? config.loopDuration : duration + config.pauseDuration;
 
   function setViewport(bounds) {
     const min = { x: bounds.x, y: bounds.y };
@@ -26,8 +29,7 @@ export function createChoreography(config, motif, tile, seed) {
       const b = { x: x + motif.width / 2, y: y + motif.height / 2 };
       for (const offset of repeats.offsets(min, max, a, b, 0)) {
         const id = `${index}:${Math.round(offset.x / tile.width)}:${Math.round(offset.y / tile.height)}`;
-        const candidate = { x: x + offset.x, y: y + offset.y, sign: instance.sign,
-          phase: config.randomStartingPositions ? fractionFor(id + ':phase') * motif.length : 0,
+        const candidate = { id, x: x + offset.x, y: y + offset.y, sign: instance.sign,
           delay: fractionFor(id + ':timing') * cycle };
         candidates.push(candidate);
       }
@@ -41,16 +43,21 @@ export function createChoreography(config, motif, tile, seed) {
     }
   }
   function advance(seconds) {
-    time = (time + seconds) % cycle;
+    time += seconds;
+    if (continuous) time %= cycle;
   }
   function trail(instance, elapsed) {
-    if (elapsed <= 0 || elapsed >= duration) return [];
-    const progress = elapsed * motif.length / config.loopDuration;
-    return [{ instance, head: instance.phase + Math.min(progress, motif.length),
-      tail: instance.phase + Math.max(0, progress - motif.length * config.trailFraction) }];
+    const draw = continuous ? '' : `:${Math.floor(elapsed / cycle)}`;
+    elapsed %= cycle;
+    if (!continuous && (elapsed <= 0 || elapsed >= duration)) return [];
+    const phase = config.randomStartingPositions ? fractionFor(instance.id + ':phase' + draw) * motif.length : 0;
+    const progress = elapsed * speed;
+    return [{ instance,
+      head: phase + (continuous ? progress : Math.min(progress, config.drawDuration * speed)),
+      tail: phase + (continuous ? progress - span : Math.max(0, progress - span)) }];
   }
   function frame() {
-    return candidates.flatMap(instance => trail(instance, (time + instance.delay) % cycle));
+    return candidates.flatMap(instance => trail(instance, time + instance.delay));
   }
   return { setViewport, advance, frame };
 }

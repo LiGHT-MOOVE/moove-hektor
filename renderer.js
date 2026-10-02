@@ -3,15 +3,15 @@ import { createRepeats } from './repeats.js';
 
 export function renderPadding(config) {
   const shadow = config.shadowEnabled ? Math.max(Math.abs(config.shadowOffsetX), Math.abs(config.shadowOffsetY)) : 0;
-  return config.strokeWidth / 2 + 4 * config.blur + shadow + 4;
+  return config.strokeWidth / 2 + 4 * (config.blurEnabled ? config.strokeWidth * config.blurRatio : 0) + shadow + 4;
 }
 
 /** Slice a closed loop and render its rotated instances through tile boundaries. */
-export function createPathRenderer(config, motif, tile) {
+export function createPathRenderer(config, motif, tile = null) {
   const { pointAt } = createGeometry();
-  const repeats = createRepeats(tile.width, tile.height);
+  const repeats = tile && createRepeats(tile.width, tile.height);
   const padding = renderPadding(config);
-  const origin = { x: 0, y: 0 }, corner = { x: tile.width, y: tile.height };
+  const origin = { x: 0, y: 0 }, corner = tile && { x: tile.width, y: tile.height };
   return function slice(instance, from, to) {
     if (to <= from) return '';
     const span = Math.min(to - from, motif.length);
@@ -28,7 +28,7 @@ export function createPathRenderer(config, motif, tile) {
         const radius = (arc.to - arc.from) / Math.abs(arc.turn);
         const angle = Math.abs(arc.turn) * (b - a) / (arc.to - arc.from);
         const sagitta = radius * (1 - Math.cos(angle / 2));
-        for (const offset of repeats.offsets(origin, corner, start, end, padding + sagitta)) {
+        for (const offset of repeats ? repeats.offsets(origin, corner, start, end, padding + sagitta) : [origin]) {
           const p = { x: start.x + offset.x, y: start.y + offset.y };
           const q = { x: end.x + offset.x, y: end.y + offset.y };
           if (!last || Math.hypot(last.x - p.x, last.y - p.y) > 1e-6) d += ` M ${p.x} ${p.y}`;

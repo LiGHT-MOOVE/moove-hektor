@@ -28,22 +28,17 @@ h1 {
 p {
   color: #506477;
 }
-form {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  padding: 20px 0;
-}
-label {
-  display: grid;
-  gap: 7px;
-  min-width: 170px;
-}
+h2 { font-size: 18px; margin: 0 0 16px; }
+section { padding: 24px 0; border-bottom: 1px solid #dce3eb; }
+form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; align-items: end; }
+label { display: grid; gap: 7px; min-width: 0; }
+label:has(input[type=checkbox]) { display: flex; align-items: center; align-self: center; }
+select { width: 100%; min-width: 0; padding: 6px; }
 output {
   font-variant-numeric: tabular-nums;
 }
 input[type=range] {
-  width: 190px;
+  width: 100%;
 }
 button {
   border: 1px solid #c6d3df;
@@ -53,41 +48,48 @@ button {
   color: inherit;
   cursor: pointer;
 }
-.toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: center;
-  margin: 0 0 20px;
-}
-.toggles label {
-  display: block;
-  min-width: 0;
-}
-#canvas {
+button:disabled, select:disabled, input:disabled { opacity: .5; cursor: default; }
+#save { background: #2466ce; border-color: #2466ce; color: white; }
+#preview {
   position: sticky;
   top: 12px;
   z-index: 10;
-  width: min(100%, calc(42vh * var(--ratio)));
+  height: 42vh;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+  background: #f5f7fa;
+  padding-bottom: 10px;
+}
+#canvas {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  aspect-ratio: var(--ratio);
   box-shadow: 0 4px 18px #192b3c1a;
   background: white;
   border: 1px solid #ccd8e3;
   border-radius: 10px;
   overflow: hidden;
 }
-#canvas > svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: var(--ratio);
+#canvas > svg { display: block; width: 100%; height: 100%; }
+.toolbar, .motif-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.toolbar > label:first-child { display: flex; align-items: center; gap: 8px; }
+.toolbar select { width: auto; }
+.actions { display: flex; gap: 8px; margin-left: auto; }
+#save-status:empty, #layout-error:empty { display: none; }
+#layout-error { margin: 0; color: #b42318; }
+.motif-picker { margin-bottom: 20px; }
+.motif-picker label { min-width: 180px; }
+@media (max-width: 600px) {
+  main { padding: 16px; }
+  .toolbar { gap: 8px 12px; font-size: 13px; }
+  .toolbar > label:first-child { flex: 1 1 100%; }
+  .toolbar select { flex: 1; }
+  form { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 }
-pre {
-  font-size: 13px;
-  white-space: pre-wrap;
-  padding: 16px;
-  background: #eaf0f6;
-  border-radius: 8px;
-}
+
 a {
   color: #2466ce;
 }
@@ -95,56 +97,76 @@ a {
 </style>
 <main>
 <h1>moove-hektor studio</h1>
-<p>Adjust one tile while viewing its 3 × 3 repeat. The blue rectangle marks the source tile. Changes here are previews; copy the settings into <code>config.js</code>, then rebuild to save them.</p>
-<p id="density" aria-live="polite"></p>
-<div id="canvas" aria-label="Nine repeated pattern tiles"></div>
-<h2>Pattern settings</h2>
-<form id="controls">
-<label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="1"></label>
-<label>Tile height <output id="tileHeight-value"></output><input id="tileHeight" type="range" min="100" max="2000" step="1"></label>
-</form>
-<p>Tile dimensions adjust spacing throughout the repeat while motif size stays unchanged. Smaller tiles can cause overlaps.</p>
-<form id="motif-controls">
-<label>Motif <select id="selected-motif"></select></label>
-<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" data-unit="%" min="-100" max="200" step="1"></label>
-<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" data-unit="%" min="-100" max="200" step="1"></label>
-<label>Drawing delay (seconds) <output id="motif-delay-value"></output><input id="motif-delay" type="range" min="0" max="60" step="1"></label>
-<label><span><input id="motif-invert" type="checkbox"> Invert motif</span></label>
-</form>
-<div class="toggles"><button id="add-motif" type="button">Add motif</button><button id="remove-motif" type="button">Remove motif</button></div>
-<p>Positions locate each motif’s center as percentages of the tile width and height (50% = halfway). Motifs wrap at tile boundaries. Select a motif, then adjust its position and inversion.</p>
-<p id="layout-error" role="status"></p>
-<div class="toggles">
-  <label><input id="animate" type="checkbox"> Animate trails</label>
-  <label><input id="random-phases" type="checkbox"> Random starting positions</label>
-  <label><input id="effects" type="checkbox"> Blur and shadow</label><button id="reset" type="button">Reset</button>
-  <a href="../hektor.svg">Fullscreen animation</a>
-</div>
-<p>Random starting positions gives each trail a seeded starting point. When disabled, all trails start at position zero on their motifs.</p>
-<div class="toggles"><label><input id="pause-trails" type="checkbox"> Pause between drawings</label></div>
-<label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="1"></label>
-<p>Trail length is a percentage of the motif perimeter, including the fading ends. Changing it enables animation; reduced motion still shows complete outlines.</p>
-<p>Each motif uses its own fixed drawing delay, before the first drawing and after its tail finishes. Disable pauses for continuous movement. Repeated tile copies share their motif’s timing.</p>
-<form id="preview-controls">
-<label>Motif width (pixels) <output id="motifWidth-value"></output><input id="motifWidth" type="range" data-unit=" px" min="100" max="1000" step="1"></label>
+<div id="preview">
+<div id="canvas" aria-label="Desktop screen preview"></div>
+<div class="toolbar" role="group" aria-label="Preview and save">
 <label>Preview mode <select id="preview-mode">
 <option value="layout">Tile layout (3 × 3)</option>
 <option value="desktop">Desktop (1440 × 900)</option>
 <option value="mobile">Mobile (390 × 844)</option>
 </select></label>
+<label><input id="animate" type="checkbox"> Animate trails</label>
+<a href="../hektor.svg">Open saved SVG</a>
+<div class="actions"><button id="reset" type="button">Reset</button><button id="save" type="button">Save</button></div>
+<span id="save-status" role="status"></span>
+<p id="layout-error" role="status"></p>
+</div>
+</div>
+<section aria-labelledby="pattern-heading">
+<h2 id="pattern-heading">Pattern</h2>
+<form id="controls">
+<label>Motif width (pixels) <output id="motifWidth-value"></output><input id="motifWidth" type="range" data-unit=" px" min="100" max="1000" step="1"></label>
+<label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="1"></label>
+<label>Tile height <output id="tileHeight-value"></output><input id="tileHeight" type="range" min="100" max="2000" step="1"></label>
 </form>
-<div class="toggles"><label><input id="random-placement" type="checkbox"> Random placement</label></div>
+</section>
+<section aria-labelledby="position-heading">
+<h2 id="position-heading">Pattern position</h2>
 <form id="pattern-placement">
-<label>Horizontal placement <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="1"></label>
-<label>Vertical placement <output id="offset-y-value"></output><input id="offset-y" type="range" data-unit="%" min="-100" max="100" step="1"></label>
+<label><input id="random-placement" type="checkbox"> Random placement</label>
+<label>Horizontal offset <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="1"></label>
+<label>Vertical offset <output id="offset-y-value"></output><input id="offset-y" type="range" data-unit="%" min="-100" max="100" step="1"></label>
 </form>
-<p>Placement is a percentage of one tile, relative to the screen center. Positive values move right/down. Whole-tile shifts repeat the same placement. Adjusting placement switches to screen preview; tile layout stays anchored.</p>
-
-<h2>config.js</h2>
-<p>Comments and untouched settings are preserved. Replace the contents of <code>config.js</code> with this complete module, then run <code>npm run build</code>. Preview mode, animation/effects toggles, and the preview seed are not exported; saved appearance and seed settings are preserved.</p>
-<button id="copy-config" type="button">Copy config.js</button>
-<span id="copy-status" role="status"></span>
-<pre id="config-source" tabindex="0" aria-label="Complete config.js"></pre>
+</section>
+<section aria-labelledby="motifs-heading">
+<h2 id="motifs-heading">Motifs</h2>
+<div class="motif-picker">
+<label>Motif <select id="selected-motif"></select></label>
+<button id="add-motif" type="button">Add motif</button><button id="remove-motif" type="button">Remove motif</button>
+</div>
+<form id="motif-controls">
+<label>Horizontal position <output id="motif-x-value"></output><input id="motif-x" type="range" data-unit="%" min="-100" max="200" step="1"></label>
+<label>Vertical position <output id="motif-y-value"></output><input id="motif-y" type="range" data-unit="%" min="-100" max="200" step="1"></label>
+<label><span><input id="motif-invert" type="checkbox"> Invert motif</span></label>
+</form>
+</section>
+<section aria-labelledby="appearance-heading">
+<h2 id="appearance-heading">Appearance</h2>
+<form id="appearance-controls">
+<label>Trail color <input id="trail-color" type="color" list="trail-colors">
+<datalist id="trail-colors">
+  <option value="#2466ce" label="Original blue"></option>
+  <option value="#43bfb5" label="Teal"></option>
+  <option value="#000000" label="Black"></option>
+  <option value="#ffffff" label="White"></option>
+</datalist></label>
+<label>Stroke width <output id="stroke-width-value"></output><input id="stroke-width" type="range" min="1" max="150" step="1"></label>
+<label><input id="blurEnabled" type="checkbox"> Blur</label>
+<label><input id="shadowEnabled" type="checkbox"> Shadow</label>
+<label><input id="gradientEnabled" type="checkbox"> Background gradient</label>
+</form>
+</section>
+<section aria-labelledby="animation-heading">
+<h2 id="animation-heading">Animation</h2>
+<form id="animation-controls">
+<label>Playback <select id="playback"><option value="sequence">Sequence</option><option value="multiple">Multiple trails</option></select></label>
+<label>Circuit duration (seconds) <output id="loop-duration-value"></output><input id="loop-duration" type="range" min="1" max="60" step="1"></label>
+<label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="1"></label>
+<label><input id="random-phases" type="checkbox"> Random starting positions</label>
+<label>Order <select id="order"><option value="shuffle">Shuffle</option><option value="rows">Rows</option><option value="columns">Columns</option></select></label>
+<label>Pause between trails (seconds) <output id="pause-duration-value"></output><input id="pause-duration" type="range" min="0" max="30" step="1"></label>
+</form>
+</section>
 </main>
-<script type="module" src="./pattern-preview.js?v=fresh-config"></script>
+<script type="module" src="./pattern-preview.js?v=studio-layout-2"></script>
 </html>

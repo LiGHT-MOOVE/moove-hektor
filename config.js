@@ -3,7 +3,8 @@ export const CONFIG = {
   patternOffset: { x: 0, y: -0.15 }, // Fixed tile fractions for consistent framing; null = random.
   motifWidth: 800, // Displayed outline width in pixels; smaller screens crop the same pattern.
   strokeWidth: 38,
-  blur: 13,
+  blurEnabled: true, // Toggle blur without changing its ratio.
+  blurRatio: 0.34210526315789475, // Blur radius / stroke width (13 / 38 preserves the original softness).
   opacity: 0.55,
   color: "#2466ce",
   shadowEnabled: true, // Set false to remove the depth effect.
@@ -11,12 +12,15 @@ export const CONFIG = {
   shadowOpacity: 0.4, // Also follows the trail's overall opacity and fading.
   shadowOffsetX: -32,
   shadowOffsetY: 32,
+  gradientEnabled: true, // False uses backgroundTop as a solid background.
   backgroundTop: "#f5fcff",
   backgroundMiddle: "#e3f2ff",
   backgroundBottom: "#8ac4ff",
-  pauseBetweenDrawings: true, // false = continuous movement; true uses each motif delay.
+  playback: "multiple", // sequence = draw, drain, pause, move on; multiple = loop all repeated motifs.
+  order: "shuffle", // shuffle, rows, or columns; used by sequence playback.
+  pauseDuration: 0, // Seconds between trails, after the tail disappears.
   loopDuration: 18, // Seconds per circuit, independent of pattern size.
-  randomStartingPositions: true, // false starts every trail at position zero.
+  randomStartingPositions: true, // false starts at zero; true randomizes each Sequence appearance or each repeated motif.
   trailFraction: 0.35, // Visible fraction of each closed loop, including both ramps.
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
   headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.
@@ -43,11 +47,10 @@ export const PATTERN = {
   tileWidth: 2666,
   tileHeight: 708,
   // Motif centers as tile fractions (0.5 = halfway). Rotation is 0 or 180 degrees.
-  // Delay is seconds before the first drawing and between complete cycles.
   motifs: [
-    { x: 0, y: 0, rotation: 0, delay: 0 },
-    { x: 0.08927231807951988, y: 0.5, rotation: 180, delay: 3 },
-    { x: 0.5, y: 0.5, rotation: 0, delay: 6 },
-    { x: 0.5892723180795199, y: 1, rotation: 180, delay: 9 },
+    { x: 0, y: 0, rotation: 0 },
+    { x: 0.08927231807951988, y: 0.5, rotation: 180 },
+    { x: 0.5, y: 0.5, rotation: 0 },
+    { x: 0.5892723180795199, y: 1, rotation: 180 },
   ],
 };

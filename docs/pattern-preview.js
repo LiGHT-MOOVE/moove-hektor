@@ -1,14 +1,13 @@
-import { createScene } from '../scene.js';
-import { createSvg } from '../svg.js';
-import { initialize } from '../animation.js';
-import { updateConfigSource } from './config-source.js';
+import { createScene } from '../scene.js?v=relative-blur';
+import { createSvg } from '../svg.js?v=relative-blur';
+import { initialize } from '../animation.js?v=relative-blur';
 
 let originalSource, CONFIG, PATTERN;
 try {
   const response = await fetch('../config.js', { cache: 'no-store' });
   if (!response.ok) throw new Error(`Could not load config.js (${response.status})`);
   originalSource = await response.text();
-  // Evaluate the exact source used by the comment-preserving exporter.
+  // Keep the loaded source for detecting external edits when saving.
   const url = URL.createObjectURL(new Blob([originalSource], { type: 'text/javascript' }));
   try {
     ({ CONFIG, PATTERN } = await import(url));
@@ -27,14 +26,14 @@ const controls = get('controls');
 const motifControls = get('motif-controls');
 let placements = [];
 const animate = get('animate');
-const effects = get('effects');
+const effectKeys = ['blurEnabled', 'shadowEnabled', 'gradientEnabled'];
 const randomPhases = get('random-phases');
 const randomPlacement = get('random-placement');
 const offsetInputs = [get('offset-x'), get('offset-y')];
 const motifWidthInput = get('motifWidth');
 const previewMode = get('preview-mode');
 const screens = { desktop: [1440, 900], mobile: [390, 844] };
-let dispose;
+let dispose, settingsToSave, saving = false;
 
 function attributes(node, values) {
   for (const [key, value] of Object.entries(values)) node.setAttribute(key, value);
@@ -56,10 +55,11 @@ function setSlider(id, value) {
 
 function update() {
   updateSliderLabels();
-  get('copy-config').disabled = true;
-  get('config-source').textContent = '';
+  get('save').disabled = true;
+  settingsToSave = null;
+  get('save-status').textContent = '';
   if (!controls.reportValidity() || !motifControls.reportValidity()) {
-    get('copy-status').textContent = 'Complete valid tile dimensions and motif positions before copying.';
+    get('save-status').textContent = 'Complete valid tile dimensions and motif positions before saving.';
     return;
   }
   const placement = {
@@ -67,8 +67,8 @@ function update() {
     tileHeight: Number(get('tileHeight').value),
     motifs: placements,
   };
-  const pauseBetweenDrawings = get('pause-trails').checked;
-  get('motif-delay').disabled = !pauseBetweenDrawings;
+  const playback = get('playback').value;
+  get('order').disabled = get('pause-duration').disabled = playback === 'multiple';
   const randomStartingPositions = randomPhases.checked;
   const motifWidth = Number(motifWidthInput.value);
   offsetInputs.forEach(input => { input.disabled = randomPlacement.checked; });
@@ -78,7 +78,10 @@ function update() {
   };
 
   const pattern = { ...PATTERN, ...placement };
-  const configChanges = { motifWidth, patternOffset, randomStartingPositions, pauseBetweenDrawings,
+  const configChanges = { ...Object.fromEntries(effectKeys.map(key => [key, get(key).checked])), motifWidth, patternOffset, randomStartingPositions, playback,
+    color: get('trail-color').value, strokeWidth: Number(get('stroke-width').value),
+    order: get('order').value, pauseDuration: Number(get('pause-duration').value),
+    loopDuration: Number(get('loop-duration').value),
     trailFraction: Number(get('trail-length').value) / 100 };
   const savedConfig = { ...CONFIG, ...configChanges };
   let scene;
@@ -87,26 +90,11 @@ function update() {
     get('layout-error').textContent = '';
   } catch (error) {
     get('layout-error').textContent = error.message;
-    get('copy-status').textContent = 'Fix the settings before copying.';
     return;
   }
-  try {
-    get('config-source').textContent = updateConfigSource(originalSource, {
-      CONFIG: configChanges,
-      PATTERN: placement,
-    });
-    get('copy-config').disabled = false;
-    get('copy-status').textContent = '';
-  } catch (error) {
-    get('copy-status').textContent = `Export unavailable: ${error.message}`;
-  }
-  const config = {
-    ...savedConfig, seed: 42,
-    ...(effects.checked ? {} : {
-      strokeWidth: 8, blur: 0, shadowEnabled: false, opacity: 1, color: '#26384a',
-      backgroundTop: 'white', backgroundMiddle: 'white', backgroundBottom: 'white',
-    }),
-  };
+  settingsToSave = { config: savedConfig, pattern };
+  get('save').disabled = saving;
+  const config = { ...savedConfig, seed: 42 };
   const { width, height } = scene.tile;
   const template = new DOMParser().parseFromString(createSvg(config, scene.tile), 'image/svg+xml');
   const svg = document.importNode(template.documentElement, true);
@@ -116,24 +104,16 @@ function update() {
     : { x: -width, y: -height, width: width * 3, height: height * 3 };
   attributes(svg, { viewBox: `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}` });
   get('canvas').style.setProperty('--ratio', String(bounds.width / bounds.height));
-  // Fit the simulated screen into the Studio without changing its logical pixel size.
-  get('canvas').style.maxWidth = screen ? `${screen[0]}px` : '';
   get('canvas').setAttribute('aria-label', screen ? `${previewMode.value} screen preview` : 'Nine repeated pattern tiles');
   for (const rect of svg.querySelectorAll(':scope > rect')) attributes(rect, bounds);
-  const scale = motifWidth / scene.motif.width;
-  get('density').textContent = screen
-    ? `${(screen[0] / (width * scale)).toFixed(2)} tile columns × ${(screen[1] / (height * scale)).toFixed(2)} tile rows (including partial tiles). Preview may be scaled to fit this page.`
-    : 'Tile layout shows a fixed 3 × 3 repeat. Adjusting scale switches to screen preview.';
-  if (!effects.checked) svg.querySelector('#drawing').removeAttribute('filter');
 
   dispose?.();
   get('canvas').replaceChildren(svg);
-  dispose = initialize(config, pattern, svg, !animate.checked, scene);
+  dispose = initialize(config, pattern, svg, !animate.checked, scene, screen ? { width: screen[0], height: screen[1] } : { nativeBounds: { x: 0, y: 0, width, height } });
   if (!screen) {
     // Inspect native tile coordinates without screen centering or crop offsets.
     attributes(svg.querySelector('#pattern-viewport'), { x: 0, y: 0 });
     attributes(svg.querySelector('#field'), bounds);
-    svg.querySelector('#motifs').removeAttribute('patternTransform');
     const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     attributes(outline, {
       x: 0, y: 0, width, height, fill: 'none', stroke: '#287be0',
@@ -148,7 +128,6 @@ function showSelectedMotif() {
   setSlider('motif-x', motif.x * 100);
   setSlider('motif-y', motif.y * 100);
   get('motif-invert').checked = motif.rotation === 180;
-  setSlider('motif-delay', motif.delay);
   get('remove-motif').disabled = placements.length === 1;
   updateSliderLabels();
 }
@@ -160,17 +139,22 @@ function refreshMotifList(selected = 0) {
 }
 
 function reset() {
-  get('pause-trails').checked = CONFIG.pauseBetweenDrawings;
+  get('trail-color').value = CONFIG.color;
+  setSlider('stroke-width', CONFIG.strokeWidth);
+  get('playback').value = CONFIG.playback;
+  get('order').value = CONFIG.order;
+  setSlider('pause-duration', CONFIG.pauseDuration);
+  setSlider('loop-duration', CONFIG.loopDuration);
   setSlider('trail-length', CONFIG.trailFraction * 100);
   setSlider('motifWidth', CONFIG.motifWidth);
-  previewMode.value = 'layout';
+  previewMode.value = 'desktop';
   randomPlacement.checked = CONFIG.patternOffset == null;
   offsetInputs.forEach((input, i) => {
     const fraction = CONFIG.patternOffset?.[i === 0 ? 'x' : 'y'] ?? 0;
     input.value = (fraction % 1) * 100;
   });
-  animate.checked = false;
-  effects.checked = false;
+  animate.checked = true;
+  effectKeys.forEach(key => { get(key).checked = CONFIG[key]; });
   randomPhases.checked = CONFIG.randomStartingPositions;
   setSlider('tileWidth', PATTERN.tileWidth);
   setSlider('tileHeight', PATTERN.tileHeight);
@@ -184,23 +168,23 @@ function updateStartingPositions() {
   update();
 }
 
-randomPhases.addEventListener('change', updateStartingPositions);
-get('pause-trails').addEventListener('change', updateStartingPositions);
-get('trail-length').addEventListener('input', updateStartingPositions);
-controls.addEventListener('input', update);
+for (const id of ['random-phases', 'playback', 'order', 'loop-duration', 'pause-duration', 'trail-length']) {
+  get(id).addEventListener('input', updateStartingPositions);
+}
+for (const id of ['tileWidth', 'tileHeight', 'trail-color', 'stroke-width']) {
+  get(id).addEventListener('input', update);
+}
 get('selected-motif').addEventListener('change', showSelectedMotif);
 motifControls.addEventListener('input', event => {
   if (event.target.id === 'selected-motif' || !motifControls.reportValidity()) return;
   placements[Number(get('selected-motif').value)] = {
     x: Number(get('motif-x').value) / 100, y: Number(get('motif-y').value) / 100,
     rotation: get('motif-invert').checked ? 180 : 0,
-    delay: Number(get('motif-delay').value),
   };
-  if (event.target.id === 'motif-delay') animate.checked = true;
   update();
 });
 get('add-motif').addEventListener('click', () => {
-  placements.push({ x: 0.5, y: 0.5, rotation: 0, delay: 0 });
+  placements.push({ x: 0.5, y: 0.5, rotation: 0 });
   refreshMotifList(placements.length - 1);
   update();
 });
@@ -210,30 +194,48 @@ get('remove-motif').addEventListener('click', () => {
   refreshMotifList();
   update();
 });
-for (const form of [controls, motifControls, get('preview-controls'), get('pattern-placement')]) {
+for (const form of document.querySelectorAll('form')) {
   form.addEventListener('submit', event => event.preventDefault());
 }
-for (const toggle of [animate, effects]) toggle.addEventListener('change', update);
+effectKeys.forEach(key => get(key).addEventListener('change', update));
+animate.addEventListener('change', update);
 function updateScreenPreview() {
   if (previewMode.value === 'layout') previewMode.value = 'desktop';
   update();
 }
 motifWidthInput.addEventListener('input', updateScreenPreview);
-get('pattern-placement').addEventListener('input', updateScreenPreview);
+offsetInputs.forEach(input => input.addEventListener('input', updateScreenPreview));
 randomPlacement.addEventListener('change', updateScreenPreview);
 previewMode.addEventListener('change', update);
 get('reset').addEventListener('click', reset);
-get('copy-config').addEventListener('click', async () => {
+get('save').addEventListener('click', async () => {
+  if (!settingsToSave || saving) return;
+  const snapshot = settingsToSave;
+  saving = true;
+  get('save').disabled = true;
+  get('save-status').textContent = 'Saving…';
   try {
-    await navigator.clipboard.writeText(get('config-source').textContent);
-    get('copy-status').textContent = 'Copied';
-  } catch {
-    const range = document.createRange();
-    range.selectNodeContents(get('config-source'));
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-    get('copy-status').textContent = 'Copy unavailable. Text selected—press Cmd/Ctrl+C.';
+    const response = await fetch('/api/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseSource: originalSource, ...snapshot }),
+    });
+    if (!(response.headers.get('content-type') || '').includes('application/json')) {
+      throw new Error('Save requires pnpm run studio. Open http://localhost:4173.');
+    }
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Save failed.');
+    originalSource = result.source;
+    CONFIG = snapshot.config;
+    PATTERN = snapshot.pattern;
+    // Keep edits made while saving; Reset now restores the last successful save.
+    update();
+    get('save-status').textContent = 'Saved and SVG rebuilt.';
+  } catch (error) {
+    get('save-status').textContent = error.message;
+  } finally {
+    saving = false;
+    get('save').disabled = !settingsToSave;
   }
 });
+
 reset();

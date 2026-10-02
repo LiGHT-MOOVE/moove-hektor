@@ -1,8 +1,9 @@
-import { createScene } from './scene.js';
-import { createPathRenderer } from './renderer.js';
+import { createScene } from './scene.js?v=relative-blur';
+import { createPathRenderer, renderPadding } from './renderer.js?v=relative-blur';
+import { createChoreography } from './choreography.js?v=relative-blur';
 
-/** Animate one tile; native SVG pattern repetition fills any viewport. */
-export function initialize(config, pattern, root = document.documentElement, still = false, scene = createScene(config, pattern)) {
+/** Animate visible instances; use the native repeat for static inspection. */
+export function initialize(config, pattern, root = document.documentElement, still = false, scene = createScene(config, pattern), viewport = null) {
   const get = id => root.querySelector(`#${id}`);
   const path = get('trail');
   const body = get('tail-body');
@@ -10,9 +11,20 @@ export function initialize(config, pattern, root = document.documentElement, sti
   const preference = matchMedia('(prefers-reduced-motion: reduce)');
   const { motif, tile, seed } = scene;
   root.dataset.seed = String(seed);
-  const slice = createPathRenderer(config, motif, tile);
-  const scale = config.motifWidth / motif.width;
-  get('motifs').setAttribute('patternTransform', `matrix(${scale} 0 0 ${scale} ${tile.offset.x * scale} ${tile.offset.y * scale})`);
+  const slice = createPathRenderer(config, motif);
+  const repeatSlice = createPathRenderer(config, motif, tile);
+  const choreography = createChoreography(config, motif, tile, seed);
+  const drawingGroup = get('drawing');
+  const patternNode = get('motifs');
+  const activeLayer = get('active-trail');
+  const padding = renderPadding(config);
+  let bounds;
+  // Studio tile inspection supplies native bounds; screen previews use pixel framing.
+  const nativeBounds = viewport?.nativeBounds;
+  const scale = nativeBounds ? 1 : config.motifWidth / motif.width;
+  const offset = nativeBounds ? { x: 0, y: 0 } : tile.offset;
+  patternNode.setAttribute('patternTransform', `matrix(${scale} 0 0 ${scale} ${offset.x * scale} ${offset.y * scale})`);
+  activeLayer.setAttribute('transform', patternNode.getAttribute('patternTransform'));
   const isStatic = () => still || preference.matches;
   const count = 32;
   function bands(id, brightness) {
@@ -27,29 +39,40 @@ export function initialize(config, pattern, root = document.documentElement, sti
   }
   const tails = bands('tail-ramp', t => t);
   const heads = bands('head-ramp', t => Math.pow(1 - t, config.headFadePower));
-  let frame, previous, distance = 0, disposed = false;
+  let frame, previous, disposed = false;
   const span = motif.length * config.trailFraction;
   const tailSpan = Math.min(config.tailFadeLength, span);
   const headSpan = Math.min(config.headFadeLength, span);
-  const cycling = config.pauseBetweenDrawings;
-  const cycleDuration = config.loopDuration * (1 + config.trailFraction);
-  const clocks = tile.instances.map(instance => ({ time: -instance.delay, delay: instance.delay }));
+  function setRegion(region) {
+    for (const id of ['soften', 'tail-mask', 'head-mask']) {
+      for (const [key, value] of Object.entries(region)) get(id).setAttribute(key, value);
+    }
+  }
+  function updateViewport() {
+    const width = nativeBounds?.width ?? viewport?.width ?? root.clientWidth;
+    const height = nativeBounds?.height ?? viewport?.height ?? root.clientHeight;
+    if (!(width > 0 && height > 0)) return;
+    bounds = nativeBounds ?? { x: -width / (2 * scale) - tile.offset.x, y: -height / (2 * scale) - tile.offset.y,
+      width: width / scale, height: height / scale };
+    choreography.setViewport(bounds);
+    configureLayer();
+    render();
+  }
+  function configureLayer() {
+    const patternMode = isStatic();
+    (patternMode ? patternNode : activeLayer).appendChild(drawingGroup);
+    get('field').style.display = patternMode ? '' : 'none';
+    const region = patternMode ? { x: 0, y: 0, width: tile.width, height: tile.height } : bounds;
+    if (region) setRegion({ x: region.x - padding, y: region.y - padding,
+      width: region.width + 2 * padding, height: region.height + 2 * padding });
+  }
   function render() {
     let drawing = '', tailBody = '', leadingBody = '';
     const tailPaths = Array(count).fill(''), headPaths = Array(count).fill('');
     const staticMode = isStatic();
-    for (const [index, instance] of tile.instances.entries()) {
-      if (staticMode) {
-        drawing += ' ' + slice(instance, 0, motif.length);
-        continue;
-      }
-      let head = distance + instance.phase, tail = head - span;
-      if (cycling) {
-        const progress = clocks[index].time * motif.length / config.loopDuration;
-        if (progress <= 0 || progress >= motif.length + span) continue;
-        head = instance.phase + Math.min(progress, motif.length);
-        tail = instance.phase + Math.max(0, progress - span);
-      }
+    if (staticMode) {
+      drawing = tile.instances.map(instance => repeatSlice(instance, 0, motif.length)).join(' ');
+    } else for (const { instance, head, tail } of choreography.frame()) {
       const tailRamp = Math.min(tailSpan, head - tail);
       const headRamp = Math.min(headSpan, head - tail);
       drawing += ' ' + slice(instance, tail, head);
@@ -70,30 +93,26 @@ export function initialize(config, pattern, root = document.documentElement, sti
     if (disposed || isStatic()) return;
     const dt = previous === undefined ? 0 : Math.max(0, Math.min(50, timestamp - previous));
     previous = timestamp;
-    if (cycling) {
-      for (const clock of clocks) {
-        clock.time += dt / 1000;
-        if (clock.time >= cycleDuration) {
-          clock.time = (clock.time + clock.delay) % (cycleDuration + clock.delay) - clock.delay;
-        }
-      }
-    } else {
-      distance = (distance + motif.length * dt / (config.loopDuration * 1000)) % motif.length;
-    }
+    choreography.advance(dt / 1000);
     render();
     frame = requestAnimationFrame(tick);
   }
   function onPreferenceChange() {
     cancelAnimationFrame(frame); previous = undefined;
+    configureLayer();
     render();
     if (!isStatic()) frame = requestAnimationFrame(tick);
   }
   function dispose() {
     disposed = true; cancelAnimationFrame(frame);
+    observer?.disconnect();
     preference.removeEventListener('change', onPreferenceChange);
     window.removeEventListener('pagehide', onPageHide);
   }
   function onPageHide(event) { if (!event.persisted) dispose(); }
+  const observer = viewport ? null : new ResizeObserver(updateViewport);
+  observer?.observe(root);
+  updateViewport();
   preference.addEventListener('change', onPreferenceChange);
   window.addEventListener('pagehide', onPageHide);
   onPreferenceChange();

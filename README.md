@@ -40,7 +40,7 @@ The local server enables saving and disables browser caching.
 | Pattern position | Random placement and horizontal / vertical offsets |
 | Motifs | Select, add, remove, position, and invert motifs |
 | Appearance | Trail color, stroke width, blur, shadow, and background gradient |
-| Animation | Circuit duration, trail length, random starts, and pause |
+| Animation | Staggering, circuit duration, trail length, random starts, and pause |
 
 Studio opens in **Desktop** with **Animate trails** enabled. Animation and other
 design settings come from `config.js`.
@@ -52,7 +52,10 @@ design settings come from `config.js`.
 - Preview mode and Animate trails are not saved.
 
 Each intersecting motif copy independently draws a circuit, lets its tail disappear,
-and pauses. Timing is staggered; increasing Pause makes fewer trails active on
+and pauses. Staggering can be random, left-to-right by column (Scan X), or
+top-to-bottom by row (Scan Y). Copies at the same axis position start together;
+scan groups are evenly spaced over the cycle and regroup when the viewport changes.
+As with random staggering, the animation starts with cycles already in progress; increasing Pause makes fewer trails active on
 average. Zero pause starts the next drawing immediately after draining. Random
 starting positions change where drawing begins on the outline, independently of timing.
 
@@ -82,6 +85,7 @@ and tangent.
 | `motifWidth` | Displayed motif width in pixels |
 | `patternOffset` | `{ x, y }` tile fractions relative to screen center; positive moves right/down; `null` randomizes placement |
 | `loopDuration` | Seconds per circuit |
+| `staggerMode` | `random`, `x` (columns), or `y` (rows); independent of outline starting positions |
 | `pauseDuration` | Seconds after a trail disappears; per motif |
 | `randomStartingPositions` | Random starting point when true; start at zero when false |
 | `trailFraction` | Trail length as a fraction of the perimeter, including fades; greater than 0 and less than 1 |

@@ -1,6 +1,6 @@
-import { createScene } from '../scene.js?v=trails-only';
+import { createScene } from '../scene.js?v=stagger-modes';
 import { createSvg } from '../svg.js?v=relative-blur';
-import { initialize } from '../animation.js?v=trails-only';
+import { initialize } from '../animation.js?v=stagger-modes';
 
 let originalSource, CONFIG, PATTERN;
 try {
@@ -78,7 +78,7 @@ function update() {
   const pattern = { ...PATTERN, ...placement };
   const configChanges = { ...Object.fromEntries(effectKeys.map(key => [key, get(key).checked])), motifWidth, patternOffset, randomStartingPositions,
     color: get('trail-color').value, strokeWidth: Number(get('stroke-width').value),
-    pauseDuration: Number(get('pause-duration').value),
+    staggerMode: get('stagger-mode').value, pauseDuration: Number(get('pause-duration').value),
     loopDuration: Number(get('loop-duration').value),
     trailFraction: Number(get('trail-length').value) / 100 };
   const savedConfig = { ...CONFIG, ...configChanges };
@@ -149,6 +149,7 @@ function refreshMotifList(selected = 0) {
 function reset() {
   get('trail-color').value = CONFIG.color;
   setSlider('stroke-width', CONFIG.strokeWidth);
+  get('stagger-mode').value = CONFIG.staggerMode;
   setSlider('pause-duration', CONFIG.pauseDuration);
   setSlider('loop-duration', CONFIG.loopDuration);
   setSlider('trail-length', CONFIG.trailFraction * 100);
@@ -174,7 +175,7 @@ function updateStartingPositions() {
   update();
 }
 
-for (const id of ['random-phases', 'loop-duration', 'pause-duration', 'trail-length']) {
+for (const id of ['stagger-mode', 'random-phases', 'loop-duration', 'pause-duration', 'trail-length']) {
   get(id).addEventListener('input', updateStartingPositions);
 }
 for (const id of ['tileWidth', 'tileHeight', 'trail-color', 'stroke-width']) {

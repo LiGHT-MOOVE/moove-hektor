@@ -3,7 +3,7 @@ import { createRepeats } from './repeats.js';
 /** Stagger independent draw/drain/pause cycles for visible motif copies. */
 export function createChoreography(config, motif, tile, seed) {
   const repeats = createRepeats(tile.width, tile.height);
-  // Position-based timing and phases stay stable across resize.
+  // Random timing and outline phases stay stable across resize.
   function fractionFor(id) {
     let hash = seed >>> 0;
     for (const char of id) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
@@ -32,6 +32,13 @@ export function createChoreography(config, motif, tile, seed) {
         candidates.push(candidate);
       }
     });
+    if (config.staggerMode !== 'random') {
+      // Group equal coordinates, ignoring floating-point noise at tile boundaries.
+      const position = instance => Math.round(instance[config.staggerMode] * 1e6) / 1e6;
+      const positions = [...new Set(candidates.map(position))].sort((a, b) => a - b);
+      const offsets = new Map(positions.map((value, index) => [value, cycle * (1 - index / positions.length)]));
+      for (const instance of candidates) instance.delay = offsets.get(position(instance));
+    }
   }
   function advance(seconds) {
     time = (time + seconds) % cycle;

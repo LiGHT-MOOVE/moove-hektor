@@ -159,6 +159,7 @@ a {
 <section aria-labelledby="animation-heading">
 <h2 id="animation-heading">animation</h2>
 <form id="animation-controls">
+<label>Staggering <select id="stagger-mode"><option value="random">Random</option><option value="x">Scan X (columns)</option><option value="y">Scan Y (rows)</option></select></label>
 <label>Circuit duration (seconds) <output id="loop-duration-value"></output><input id="loop-duration" type="range" min="1" max="60" step="1"></label>
 <label>Trail length <output id="trail-length-value"></output><input id="trail-length" type="range" data-unit="%" min="1" max="99" step="1"></label>
 <label><input id="random-phases" type="checkbox"> Random starting positions</label>
@@ -166,5 +167,5 @@ a {
 </form>
 </section>
 </main>
-<script type="module" src="./studio.js?v=trails-only"></script>
+<script type="module" src="./studio.js?v=stagger-modes"></script>
 </html>

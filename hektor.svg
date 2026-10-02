@@ -176,6 +176,7 @@ const createScene = function createScene(config, pattern) {
   for (const key of ['blurEnabled', 'shadowEnabled', 'gradientEnabled']) {
     if (typeof config[key] !== 'boolean') throw new Error(`${key} must be a boolean`);
   }
+  if (!['random', 'x', 'y'].includes(config.staggerMode)) throw new Error('Invalid stagger mode');
   if (typeof config.randomStartingPositions !== 'boolean') throw new Error('Random starting positions must be a boolean');
   const seed = config.seed ?? crypto.getRandomValues(new Uint32Array(1))[0];
   const motif = createMotif(pattern);
@@ -190,7 +191,7 @@ const createScene = function createScene(config, pattern) {
 };
 const createChoreography = function createChoreography(config, motif, tile, seed) {
   const repeats = createRepeats(tile.width, tile.height);
-  // Position-based timing and phases stay stable across resize.
+  // Random timing and outline phases stay stable across resize.
   function fractionFor(id) {
     let hash = seed >>> 0;
     for (const char of id) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
@@ -219,6 +220,13 @@ const createChoreography = function createChoreography(config, motif, tile, seed
         candidates.push(candidate);
       }
     });
+    if (config.staggerMode !== 'random') {
+      // Group equal coordinates, ignoring floating-point noise at tile boundaries.
+      const position = instance => Math.round(instance[config.staggerMode] * 1e6) / 1e6;
+      const positions = [...new Set(candidates.map(position))].sort((a, b) => a - b);
+      const offsets = new Map(positions.map((value, index) => [value, cycle * (1 - index / positions.length)]));
+      for (const instance of candidates) instance.delay = offsets.get(position(instance));
+    }
   }
   function advance(seconds) {
     time = (time + seconds) % cycle;
@@ -347,5 +355,5 @@ const initialize = function initialize(config, pattern, root = document.document
   onPreferenceChange();
   return dispose;
 };
-initialize({"patternOffset":{"x":0,"y":-0.15},"motifWidth":800,"strokeWidth":38,"blurEnabled":true,"blurRatio":0.34210526315789475,"opacity":0.55,"color":"#2466ce","shadowEnabled":true,"shadowColor":"#437bbc","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"gradientEnabled":true,"backgroundTop":"#f5fcff","backgroundMiddle":"#e3f2ff","backgroundBottom":"#8ac4ff","pauseDuration":0,"loopDuration":18,"randomStartingPositions":true,"trailFraction":0.35,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"seed":null}, {"turns":[{"radius":142,"degrees":-90},{"radius":96,"degrees":180},{"radius":142,"degrees":-180},{"radius":96,"degrees":180},{"radius":142,"degrees":-90},{"radius":96,"degrees":270},{"radius":142,"degrees":-180},{"radius":96,"degrees":180},{"radius":142,"degrees":-180},{"radius":96,"degrees":270}],"tileWidth":2666,"tileHeight":708,"motifs":[{"x":0,"y":0,"rotation":0},{"x":0.08927231807951988,"y":0.5,"rotation":180},{"x":0.5,"y":0.5,"rotation":0},{"x":0.5892723180795199,"y":1,"rotation":180}]});]]></script>
+initialize({"patternOffset":{"x":0,"y":-0.15},"motifWidth":800,"strokeWidth":38,"blurEnabled":true,"blurRatio":0.34210526315789475,"opacity":0.55,"color":"#2466ce","shadowEnabled":true,"shadowColor":"#437bbc","shadowOpacity":0.4,"shadowOffsetX":-32,"shadowOffsetY":32,"gradientEnabled":true,"backgroundTop":"#f5fcff","backgroundMiddle":"#e3f2ff","backgroundBottom":"#8ac4ff","staggerMode":"random","pauseDuration":0,"loopDuration":18,"randomStartingPositions":true,"trailFraction":0.35,"headFadeLength":110,"headFadePower":1.8,"tailFadeLength":160,"seed":null}, {"turns":[{"radius":142,"degrees":-90},{"radius":96,"degrees":180},{"radius":142,"degrees":-180},{"radius":96,"degrees":180},{"radius":142,"degrees":-90},{"radius":96,"degrees":270},{"radius":142,"degrees":-180},{"radius":96,"degrees":180},{"radius":142,"degrees":-180},{"radius":96,"degrees":270}],"tileWidth":2666,"tileHeight":708,"motifs":[{"x":0,"y":0,"rotation":0},{"x":0.08927231807951988,"y":0.5,"rotation":180},{"x":0.5,"y":0.5,"rotation":0},{"x":0.5892723180795199,"y":1,"rotation":180}]});]]></script>
 </svg>

@@ -28,6 +28,7 @@ export function createScene(config, pattern) {
   for (const key of ['blurEnabled', 'shadowEnabled', 'gradientEnabled']) {
     if (typeof config[key] !== 'boolean') throw new Error(`${key} must be a boolean`);
   }
+  if (!['random', 'x', 'y'].includes(config.staggerMode)) throw new Error('Invalid stagger mode');
   if (typeof config.randomStartingPositions !== 'boolean') throw new Error('Random starting positions must be a boolean');
   const seed = config.seed ?? crypto.getRandomValues(new Uint32Array(1))[0];
   const motif = createMotif(pattern);

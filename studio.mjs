@@ -56,7 +56,7 @@ createServer(async (req, res) => {
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return reply(405, 'Method not allowed.');
   if (path === '/') {
-    res.writeHead(302, { Location: '/docs/pattern-preview.html' }); res.end(); return;
+    res.writeHead(302, { Location: '/docs/studio.html' }); res.end(); return;
   }
   // Only public project files; no directory listing or arbitrary filesystem access.
   if (!/^\/(?:[\w-]+\.(?:js|svg)|README\.md|docs\/[\w-]+\.(?:html|js|svg))$/.test(path)) {
@@ -67,4 +67,4 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': types[path.slice(path.lastIndexOf('.'))] });
     res.end(req.method === 'HEAD' ? undefined : content);
   } catch { reply(404, 'Not found.'); }
-}).listen(port, '127.0.0.1', () => console.log(`Studio: ${origin}/docs/pattern-preview.html`));
+}).listen(port, '127.0.0.1', () => console.log(`Studio: ${origin}/docs/studio.html`));

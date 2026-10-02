@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>moove-hektor studio</title>
+<title>moove-hektor</title>
 <style>
 * {
   box-sizing: border-box;
@@ -96,7 +96,7 @@ a {
 
 </style>
 <main>
-<h1>moove-hektor studio</h1>
+<h1>moove-hektor</h1>
 <div id="preview">
 <div id="canvas" aria-label="Desktop screen preview"></div>
 <div class="toolbar" role="group" aria-label="Preview and save">
@@ -113,7 +113,7 @@ a {
 </div>
 </div>
 <section aria-labelledby="pattern-heading">
-<h2 id="pattern-heading">Pattern</h2>
+<h2 id="pattern-heading">pattern</h2>
 <form id="controls">
 <label>Motif width (pixels) <output id="motifWidth-value"></output><input id="motifWidth" type="range" data-unit=" px" min="100" max="1000" step="1"></label>
 <label>Tile width <output id="tileWidth-value"></output><input id="tileWidth" type="range" min="200" max="5000" step="1"></label>
@@ -121,7 +121,7 @@ a {
 </form>
 </section>
 <section aria-labelledby="position-heading">
-<h2 id="position-heading">Pattern position</h2>
+<h2 id="position-heading">pattern position</h2>
 <form id="pattern-placement">
 <label><input id="random-placement" type="checkbox"> Random placement</label>
 <label>Horizontal offset <output id="offset-x-value"></output><input id="offset-x" type="range" data-unit="%" min="-100" max="100" step="1"></label>
@@ -129,9 +129,9 @@ a {
 </form>
 </section>
 <section aria-labelledby="motifs-heading">
-<h2 id="motifs-heading">Motifs</h2>
+<h2 id="motifs-heading">motifs</h2>
 <div class="motif-picker">
-<label>Motif <select id="selected-motif"></select></label>
+<label><select id="selected-motif" aria-label="Motif"></select></label>
 <button id="add-motif" type="button">Add motif</button><button id="remove-motif" type="button">Remove motif</button>
 </div>
 <form id="motif-controls">
@@ -141,7 +141,7 @@ a {
 </form>
 </section>
 <section aria-labelledby="appearance-heading">
-<h2 id="appearance-heading">Appearance</h2>
+<h2 id="appearance-heading">appearance</h2>
 <form id="appearance-controls">
 <label>Trail color <input id="trail-color" type="color" list="trail-colors">
 <datalist id="trail-colors">
@@ -157,7 +157,7 @@ a {
 </form>
 </section>
 <section aria-labelledby="animation-heading">
-<h2 id="animation-heading">Animation</h2>
+<h2 id="animation-heading">animation</h2>
 <form id="animation-controls">
 <label>Playback <select id="playback"><option value="sequence">Sequence</option><option value="multiple">Multiple trails</option></select></label>
 <label>Circuit duration (seconds) <output id="loop-duration-value"></output><input id="loop-duration" type="range" min="1" max="60" step="1"></label>
@@ -168,5 +168,5 @@ a {
 </form>
 </section>
 </main>
-<script type="module" src="./pattern-preview.js?v=studio-layout-2"></script>
+<script type="module" src="./studio.js?v=studio-layout-2"></script>
 </html>

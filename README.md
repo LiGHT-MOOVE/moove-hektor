@@ -9,19 +9,28 @@ Requires Node.js 18 or newer. Run `pnpm run build` (or `npm run build`) to gener
 `hektor.svg`. Rebuild after changing configuration or source files.
 
 ```html
-<object type="image/svg+xml" data="/hektor.svg"
-        aria-label="Animated Moove pattern"
-        style="position:fixed;inset:0;width:100%;height:100%;border:0;pointer-events:none">
-</object>
+<iframe
+  src="/hektor.svg"
+  sandbox="allow-scripts"
+  title="Decorative animated background"
+  aria-hidden="true"
+  tabindex="-1"
+  style="position:fixed;inset:0;width:100%;height:100%;border:0;pointer-events:none"
+></iframe>
 ```
 
-Give the object an explicit size. An `<img>` or CSS background does not execute
-embedded scripts. The site's content security policy must allow the embedding
-and script method.
+Adjust the asset path and place the iframe behind the site's content.
+Keep `sandbox="allow-scripts"` without `allow-same-origin`: the animation can
+update its own SVG but cannot access the parent page's DOM or origin-based storage.
+The sandbox does not block all network requests; the SVG makes none.
+
+The site's CSP must permit the frame, and any CSP served with the SVG must permit
+its embedded script and styles. An `<img>` or CSS background will not run the
+animation. Check the embed with the production CSP and target browsers.
 
 ## Use Studio
 
-Run `pnpm run studio` and open [Studio](http://localhost:4173/docs/pattern-preview.html).
+Run `pnpm run studio` and open [Studio](http://localhost:4173/docs/studio.html).
 The local server enables saving and disables browser caching.
 
 | Section | Controls |
@@ -100,7 +109,7 @@ for Studio to load configuration.
 - `choreography.js`: visible candidates, drawing order, and playback timing.
 - `animation.js`: trail rendering, fading, viewport updates, and lifecycle.
 - `svg.js`: shared SVG markup for the build and Studio.
-- `docs/pattern-preview.html` / `docs/pattern-preview.js`: Studio interface and preview controls.
+- `docs/studio.html` / `docs/studio.js`: Studio interface and preview controls.
 - `docs/config-source.js`: comment-preserving configuration updates used by the Save endpoint.
 - `studio.mjs`: local development server and Save endpoint.
 - `build.mjs`: generate the standalone `hektor.svg` with embedded runtime.

@@ -42,9 +42,9 @@ export default function Editor({ runtimeSource }: { runtimeSource: string }) {
     } catch (error) { setError(error instanceof Error ? error.message : "SVG export failed."); }
   }
 
-  return <main className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+  return <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
     <header className="mb-5 flex flex-col gap-3 border-b border-slate-300 pb-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><h1 className="text-2xl font-semibold tracking-normal">moove-hektor</h1><p className="mt-1 text-sm text-slate-500">Hero banner generator</p></div>
+      <div><h1 className="text-2xl font-semibold tracking-normal">moove-hektor</h1><p className="mt-1 text-sm text-slate-500">Hero banner generator for Moove</p></div>
       <div className="flex flex-wrap gap-2">
         <Button disabled={!ready} onClick={() => { resetProject(); setSelection(0); setMode("desktop"); setAnimate(true); setError(null); setResetCount(value => value + 1); }}>Restore defaults</Button>
         <Button primary disabled={!ready} onClick={() => exportSvg()}>Download SVG</Button>

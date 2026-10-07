@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { DEFAULT_PROJECT } from "./config";
+import { DEFAULT_PROJECT } from "./defaults";
 import { validateProject, type HektorConfig, type HektorPattern, type HektorProject } from "./project";
 
 type StudioStore = {

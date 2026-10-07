@@ -1,7 +1,12 @@
-/** Runs in the Server Component during Next.js development and static generation. */
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
+/**
+ * page.tsx compiles the runtime on the server and passes it to Studio for SVG export.
+ * Keep runtime.ts self-contained, with only type imports; the compiler stays outside the browser bundle.
+ * In development, reload after editing runtime.ts and before exporting to refresh this file read.
+ * Production builds always compile the current source.
+ */
 export async function compileRuntime(): Promise<string> {
   const source = await readFile(`${process.cwd()}/app/runtime.ts`, "utf8");
   const file = ts.createSourceFile("runtime.ts", source, ts.ScriptTarget.ES2020, true);

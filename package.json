@@ -2,11 +2,28 @@
   "name": "moove-hektor",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "description": "Builds a self-contained SVG with responsive closed motifs with animated trails",
-  "engines": { "node": ">=18" },
   "scripts": {
-    "build": "node build.mjs",
-    "studio": "node studio.mjs"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "serve out",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "serve": "^14.2.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

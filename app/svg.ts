@@ -1,11 +1,12 @@
-import { renderPadding } from "./renderer.js?v=relative-blur";
+import type { HektorConfig } from "./project";
+import { renderPadding } from "./runtime";
 
-const esc = value => String(value).replace(/[&<>"']/g, c => ({
+const esc = (value: string | number) => String(value).replace(/[&<>"']/g, c => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;",
-})[c]);
+} as Record<string, string>)[c]);
 
 /** Shared markup for the standalone file and live Studio preview. */
-export function createSvg(config, tile, script = "") {
+export function createSvg(config: HektorConfig, tile: { width: number; height: number }, script = "") {
   const source = config.blurEnabled ? "blurred" : "SourceGraphic";
   const padding = renderPadding(config);
   const region = `x="${-padding}" y="${-padding}" width="${tile.width + 2 * padding}" height="${tile.height + 2 * padding}"`;

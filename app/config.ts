@@ -1,5 +1,7 @@
+import type { HektorConfig, HektorPattern, HektorProject } from "./project";
+
 // Lengths use native motif units unless noted; duration uses seconds.
-export const CONFIG = {
+export const CONFIG: HektorConfig = {
   patternOffset: { x: 0, y: -0.15 }, // Fixed tile fractions for consistent framing; null = random.
   motifWidth: 800, // Displayed outline width in pixels; smaller screens crop the same pattern.
   strokeWidth: 38,
@@ -29,7 +31,7 @@ export const CONFIG = {
 };
 
 /** Native geometry and placement of one complete repeat. */
-export const PATTERN = {
+export const PATTERN: HektorPattern = {
   // One closed outline. Each radius is a positive native-unit distance.
   // Clockwise degrees are positive.
   turns: [
@@ -54,3 +56,5 @@ export const PATTERN = {
     { x: 0.5892723180795199, y: 1, rotation: 180 },
   ],
 };
+
+export const DEFAULT_PROJECT: HektorProject = { version: 1, config: CONFIG, pattern: PATTERN };

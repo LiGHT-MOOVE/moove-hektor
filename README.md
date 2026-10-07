@@ -53,6 +53,7 @@ Run `pnpm build` before `pnpm start`.
 | Drawing duration | Seconds spent drawing before the tail drains; applies when pause is greater than zero |
 | Trail length | Visible trail length as a percentage of the outline |
 | Pause between trails | Seconds to wait after the trail disappears; zero loops continuously |
+| Head fade length / Tail fade length | Set each fade length in native motif units; zero disables that ramp |
 
 ## Projects
 

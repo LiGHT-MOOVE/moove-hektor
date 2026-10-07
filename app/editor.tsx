@@ -128,6 +128,9 @@ export default function Editor({ runtimeSource }: { runtimeSource: string }) {
               <Range label="Drawing duration" value={config.drawDuration} min={1} max={120} unit=" s" disabled={config.pauseDuration === 0} onValue={drawDuration => changeConfig({ drawDuration }, true)} />
               <Range label="Trail length" value={config.trailFraction * 100} min={1} max={99} unit="%" onValue={value => changeConfig({ trailFraction: value / 100 }, true)} />
               <Range label="Pause between trails" value={config.pauseDuration} min={0} max={30} unit=" s" onValue={pauseDuration => changeConfig({ pauseDuration }, true)} />
+              <Range label="Head fade length" value={config.headFadeLength} min={0} max={500} onValue={headFadeLength => changeConfig({ headFadeLength }, true)} />
+              <Range label="Tail fade length" value={config.tailFadeLength} min={0} max={500} onValue={tailFadeLength => changeConfig({ tailFadeLength }, true)} />
+              <p className="text-xs text-slate-500 sm:col-span-2">Set a fade length to 0 for a solid, rounded end.</p>
             </div>
           </Panel>
         </div>

@@ -1,3 +1,5 @@
+![Moove Hektor](moove-hektor.jpg)
+
 # Moove Hektor
 
 A standalone animated SVG drawing soft trails across a motif layout. Inspired

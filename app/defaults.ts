@@ -25,7 +25,7 @@ export const CONFIG: HektorConfig = {
   randomStartingPositions: true, // false starts at zero; true randomizes each draw; continuous loops keep their initial offset.
   trailFraction: 0.35, // Visible fraction of each closed loop, including both ramps.
   headFadeLength: 110, // Leading opacity ramp in viewBox units; 0 disables it.
-  headFadePower: 1.8, // 1 = linear; larger values give a finer, softer tip.
+  headFadePower: 1, // 1 = linear, matching the tail; larger values give a finer, softer tip.
   tailFadeLength: 160, // Tail opacity ramp length; 0 disables it.
   seed: null, // Fresh on load; set an integer to reproduce pattern offset and phases.
 };

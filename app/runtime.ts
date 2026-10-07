@@ -284,8 +284,9 @@ export function initialize(config: HektorConfig, pattern: HektorPattern, root: S
       return node;
     });
   }
+  // Paint both ramps from the transparent tip toward the solid body.
   const tails = bands('tail-ramp', t => t);
-  const heads = bands('head-ramp', t => Math.pow(1 - t, config.headFadePower));
+  const heads = bands('head-ramp', t => Math.pow(t, config.headFadePower));
   let frame = 0, previous: number | undefined, disposed = false;
   const span = motif.length * config.trailFraction;
   const tailSpan = Math.min(config.tailFadeLength, span);
@@ -327,7 +328,7 @@ export function initialize(config: HektorConfig, pattern: HektorPattern, root: S
       leadingBody += ' ' + slice(instance, tail, head - headRamp);
       for (let i = 0; i < count; i++) {
         tailPaths[i] += ' ' + slice(instance, tail + tailRamp * i / count, tail + tailRamp * (i + 1) / count);
-        headPaths[i] += ' ' + slice(instance, head - headRamp + headRamp * i / count, head - headRamp + headRamp * (i + 1) / count);
+        headPaths[i] += ' ' + slice(instance, head - headRamp * (i + 1) / count, head - headRamp * i / count);
       }
     }
     path.setAttribute('d', drawing);

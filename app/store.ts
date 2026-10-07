@@ -42,7 +42,17 @@ export const useStudioStore = create<StudioStore>()(persist((set, get) => ({
     set({ project: result.project });
     return null;
   },
-  updateConfig: patch => get().setProject({ ...get().project, config: { ...get().project.config, ...patch } }),
+  updateConfig: patch => {
+    const project = get().project;
+    const scale = patch.strokeWidth === undefined ? 1 : patch.strokeWidth / project.config.strokeWidth;
+    return get().setProject({ ...project, config: {
+      ...project.config,
+      // Keep shadow distance proportional, including while the effect is disabled.
+      shadowOffsetX: project.config.shadowOffsetX * scale,
+      shadowOffsetY: project.config.shadowOffsetY * scale,
+      ...patch,
+    } });
+  },
   updatePattern: patch => get().setProject({ ...get().project, pattern: { ...get().project.pattern, ...patch } }),
   resetProject: () => { get().setProject(structuredClone(DEFAULT_PROJECT)); },
 }), {

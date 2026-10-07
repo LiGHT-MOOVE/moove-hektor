@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hydrateStudio, useStudioStore } from "./store";
+import { CONFIG } from "./defaults";
 import { buildSvg, downloadText } from "./export";
 import type { HektorConfig, HektorPattern } from "./project";
 import Preview, { type PreviewMode } from "./preview";
@@ -100,11 +101,23 @@ export default function Editor({ runtimeSource }: { runtimeSource: string }) {
           </Panel>
           <Panel title="Appearance">
             <div className="grid gap-5 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium text-slate-700">Trail color<input aria-label="Trail color" type="color" list="trail-colors" className="h-9 w-full cursor-pointer rounded-md border border-slate-300 bg-white p-1" value={config.color} onChange={event => changeConfig({ color: event.target.value })} />
-                <datalist id="trail-colors"><option value="#2466ce" /><option value="#43bfb5" /><option value="#000000" /><option value="#ffffff" /></datalist>
+              <label className="grid gap-2 text-sm font-medium text-slate-700">Trail color<input aria-label="Trail color" type="color" list="default-colors" className="h-9 w-full cursor-pointer rounded-md border border-slate-300 bg-white p-1" value={config.color} onChange={event => changeConfig({ color: event.target.value })} />
+                <datalist id="default-colors">
+                  <option value={CONFIG.color} /><option value="#43bfb5" /><option value="#000000" /><option value="#ffffff" />
+                  <option value={CONFIG.backgroundTop} /><option value={CONFIG.backgroundMiddle} /><option value={CONFIG.backgroundBottom} />
+                </datalist>
               </label>
               <Range label="Stroke width" value={config.strokeWidth} min={1} max={150} onValue={strokeWidth => changeConfig({ strokeWidth })} />
-              <div className="flex flex-wrap gap-4 sm:col-span-2">{([['blurEnabled', 'Blur'], ['shadowEnabled', 'Shadow'], ['gradientEnabled', 'Background gradient']] as const).map(([key, label]) => <Toggle key={key} label={label} checked={config[key]} onChange={event => changeConfig({ [key]: event.target.checked })} />)}</div>
+              <Range label="Blur" value={config.blurEnabled ? config.blurRatio * 100 : 0} min={0} max={100} unit="%" onValue={value => changeConfig({ blurEnabled: value > 0, blurRatio: value / 100 })} />
+              <div className="flex flex-wrap items-center gap-4">{([['shadowEnabled', 'Shadow'], ['gradientEnabled', 'Background gradient']] as const).map(([key, label]) => <Toggle key={key} label={label} checked={config[key]} onChange={event => changeConfig({ [key]: event.target.checked })} />)}</div>
+              <div className="grid gap-5 sm:col-span-2 sm:grid-cols-3">
+                {([['backgroundTop', 'Background top'], ['backgroundMiddle', 'Background middle'], ['backgroundBottom', 'Background bottom']] as const).map(([key, label]) => {
+                  const disabled = key !== 'backgroundTop' && !config.gradientEnabled;
+                  return <label key={key} className={`grid gap-2 text-sm font-medium text-slate-700 ${disabled ? 'opacity-40' : ''}`}>{label}
+                    <input aria-label={label} type="color" list="default-colors" className="h-9 w-full cursor-pointer rounded-md border border-slate-300 bg-white p-1 disabled:cursor-default" value={config[key]} disabled={disabled} onChange={event => changeConfig({ [key]: event.target.value })} />
+                  </label>;
+                })}
+              </div>
             </div>
           </Panel>
           <Panel title="Animation">

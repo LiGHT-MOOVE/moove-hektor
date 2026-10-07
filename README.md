@@ -42,10 +42,11 @@ Run `pnpm build` before `pnpm start`.
 | Invert motif | Rotate the selected motif by 180° |
 | Horizontal position / Vertical position | Position the selected motif as a percentage of the tile |
 | Trail color | Set the animated stroke color |
-| Stroke width | Set stroke thickness in native motif units |
-| Blur | Soften the trails |
+| Stroke width | Set stroke thickness in native motif units; blur and shadow distance scale with it |
+| Blur | Set edge softness as a percentage of stroke width; 0% disables blur |
 | Shadow | Add a shadow to the trails |
 | Background gradient | Toggle the gradient; disabling it uses the top background color |
+| Background top / Background middle / Background bottom | Set the three gradient colors; the top color also controls the solid background |
 | Staggering | Start trails randomly, left-to-right by column, or top-to-bottom by row |
 | Random starting positions | Randomize where drawing begins along each outline |
 | Circuit duration | Seconds for one complete circuit |

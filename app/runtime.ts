@@ -321,14 +321,13 @@ export function initialize(config: HektorConfig, pattern: HektorPattern, root: S
     if (staticMode) {
       drawing = tile.instances.map(instance => repeatSlice(instance, 0, motif.length)).join(' ');
     } else for (const { instance, head, tail } of choreography.frame()) {
-      const tailRamp = Math.min(tailSpan, head - tail);
-      const headRamp = Math.min(headSpan, head - tail);
       drawing += ' ' + slice(instance, tail, head);
-      tailBody += ' ' + slice(instance, tail + tailRamp, head);
-      leadingBody += ' ' + slice(instance, tail, head - headRamp);
+      tailBody += ' ' + slice(instance, tail + tailSpan, head);
+      leadingBody += ' ' + slice(instance, tail, head - headSpan);
       for (let i = 0; i < count; i++) {
-        tailPaths[i] += ' ' + slice(instance, tail + tailRamp * i / count, tail + tailRamp * (i + 1) / count);
-        headPaths[i] += ' ' + slice(instance, head - headRamp * (i + 1) / count, head - headRamp * i / count);
+        // Clip fixed-distance fade bands to the visible trail.
+        tailPaths[i] += ' ' + slice(instance, tail + tailSpan * i / count, Math.min(head, tail + tailSpan * (i + 1) / count));
+        headPaths[i] += ' ' + slice(instance, Math.max(tail, head - headSpan * (i + 1) / count), head - headSpan * i / count);
       }
     }
     path.setAttribute('d', drawing);

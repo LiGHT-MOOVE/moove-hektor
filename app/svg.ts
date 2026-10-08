@@ -28,12 +28,12 @@ export function createSvg(config: HektorConfig, tile: { width: number; height: n
       <feMerge><feMergeNode in="shadow"/><feMergeNode in="${source}"/></feMerge>` : ""}
     </filter>
     <mask id="tail-mask" maskUnits="userSpaceOnUse" ${region} style="mask-type:luminance">
-      <g id="tail-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
-      <path id="tail-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
+      <g id="tail-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="butt" stroke-linejoin="round"/>
+      <path id="tail-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="butt" stroke-linejoin="round"/>
     </mask>
     <mask id="head-mask" maskUnits="userSpaceOnUse" ${region} style="mask-type:luminance">
-      <g id="head-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
-      <path id="head-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round"/>
+      <g id="head-ramp" fill="none" stroke-width="${config.strokeWidth + 4}" stroke-linecap="butt" stroke-linejoin="round"/>
+      <path id="head-body" fill="none" stroke="white" stroke-width="${config.strokeWidth + 4}" stroke-linecap="butt" stroke-linejoin="round"/>
     </mask>
     <pattern id="motifs" patternUnits="userSpaceOnUse" width="${tile.width}" height="${tile.height}" overflow="hidden">
   <g id="drawing" opacity="${config.opacity}"${config.blurEnabled || config.shadowEnabled ? ' filter="url(#soften)"' : ""}>

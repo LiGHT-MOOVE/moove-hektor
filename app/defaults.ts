@@ -6,7 +6,7 @@ export const CONFIG: HektorConfig = {
   motifWidth: 800, // Displayed outline width in pixels; smaller screens crop the same pattern.
   strokeWidth: 38,
   blurEnabled: true, // Toggle blur without changing its ratio.
-  blurRatio: 0.34210526315789475, // Blur radius / stroke width (13 / 38 preserves the original softness).
+  blurRatio: 0.34210526315789475, // Blur radius as a proportion of stroke width.
   opacity: 0.55,
   color: "#2466ce",
   shadowEnabled: true, // Set false to remove the depth effect.

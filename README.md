@@ -1,6 +1,6 @@
 # moove-hektor
 
-A hero banner generator for Moove, inspired by **Hektor** by **Jürg Lehni**.
+A hero banner generator for Moove, inspired by [Hektor by Jürg Lehni](https://juerglehni.com/works/hektor).
 Built with Next.js, TypeScript, Tailwind CSS, and Zustand. Export self-contained
 animated SVGs or save projects as JSON.
 

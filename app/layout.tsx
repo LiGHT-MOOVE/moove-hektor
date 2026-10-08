@@ -4,9 +4,34 @@ import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"] });
 
+const title = "Moove Hektor";
+const description = "Hero banner generator for Moove. Create animated motifs, save projects, and export self-contained animated SVGs.";
+const image = {
+  url: "/moove-hektor.jpg",
+  width: 2262,
+  height: 1592,
+  alt: "Moove Hektor preview",
+};
+
 export const metadata: Metadata = {
-  title: "Moove Hektor Studio",
-  description: "Compose animated motifs, save projects, and export self-contained animated SVGs.",
+  metadataBase: new URL("https://moove-hektor.vercel.app/"),
+  title,
+  description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: title,
+    title,
+    description,
+    images: [image],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [image],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
